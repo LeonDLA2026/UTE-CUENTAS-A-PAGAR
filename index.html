@@ -244,7 +244,7 @@ tbody tr:last-child td{border-bottom:none}
 @keyframes logo-in{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
 .splash-progress-wrap{width:min(400px,80vw);display:flex;flex-direction:column;gap:10px;align-items:center}
 .splash-progress-bar{width:100%;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
-.splash-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#48c9b0);
+.splash-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#48c9b0);transition:width .6s cubic-bezier(.4,0,.2,1);
   border-radius:3px;width:0%;transition:width .4s ease}
 .splash-status{font-size:13px;color:var(--muted);text-align:center}
 .splash-btn{padding:12px 40px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);
@@ -408,9 +408,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
     <div class="splash-status" id="splash-status">Conectando con Google Sheets…</div>
   </div>
-  <button class="splash-btn" id="splash-btn" onclick="enterApp()">
-    Ingresar al sistema →
-  </button>
+
 </div>
 
 <div id="app" style="display:none">
@@ -438,7 +436,7 @@ tbody tr:last-child td{border-bottom:none}
 <div class="tabs">
   <button class="tab active" data-tab="tab-upload">📤 Cargar Facturas</button>
   <button class="tab" data-tab="tab-table">⏳ Pendientes de Revisión</button>
-  <button class="tab" data-tab="tab-pagar">💳 Facturas por Pagar</button>
+  <button class="tab" data-tab="tab-pagar" id="tab-btn-pagar">💳 Facturas por Pagar <span id="badge-pagar" style="display:none;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:middle;transition:opacity 1s ease"></span></button>
   <button class="tab" data-tab="tab-pagadas">✅ Facturas Pagadas</button>
   <button class="tab" data-tab="tab-proveedores">🏢 Proveedores</button>
   <button class="tab" data-tab="tab-auditoria">📋 Auditoría</button>
@@ -508,6 +506,8 @@ tbody tr:last-child td{border-bottom:none}
             <option>Ticket Nota de Crédito A</option>
             <option>Ticket Nota de Débito A</option>
             <option>Documento Genérico</option>
+        <option>Cupón de Póliza de Seguro</option>
+            <option>Cupón de Póliza de Seguro</option>
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:3px">
@@ -594,8 +594,8 @@ tbody tr:last-child td{border-bottom:none}
         </div>
         <div style="display:flex;flex-direction:column;gap:3px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Período contable</label>
-          <input id="m-periodo" type="month"
-            style="padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none" title="Mes y año al que corresponde el gasto contablemente"/>
+          <input id="m-periodo" type="text" placeholder="MM/AAAA" maxlength="7"
+            style="padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;font-family:monospace" title="Mes y año (MM/AAAA)"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:3px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Categoría de Gasto</label>
@@ -830,7 +830,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="pagar-summary" id="pagar-summary"></div>
     <div class="toolbar">
       <input type="text" class="search-box" id="search-pagar" placeholder="Buscar proveedor, CUIT, número..."/>
-      <button class="btn btn-primary btn-sm" id="btn-pagar-all" title="Generá la orden de pago con las facturas configuradas (⚙)">📄 Generar orden de pago</button>
+
       <button class="btn btn-sm" style="background:#f97316;color:#fff;font-weight:600"
         id="btn-aprobar-sel" title="Aprobar los pagos seleccionados (en estado Pend. Aprobación)"
         onclick="aprobarSeleccionadas()">✅ Aprobar seleccionadas</button>
@@ -1033,6 +1033,7 @@ tbody tr:last-child td{border-bottom:none}
           <option>Ticket Nota de Crédito A</option>
           <option>Ticket Nota de Débito A</option>
           <option>Documento Genérico</option>
+          <option>Cupón de Póliza de Seguro</option>
           <option>Otros</option>
         </select></div>
       <div class="vf-row"><div class="vf-label">CUIT (sin guiones)</div>
@@ -1066,9 +1067,9 @@ tbody tr:last-child td{border-bottom:none}
       <div class="vf-row"><div class="vf-label">⭐ Total</div>
         <input class="vf-input vf-highlight" type="number" step="0.01" id="vw-total"/></div>
       <div class="divider"></div>
-      <div class="vf-row"><div class="vf-label">CAE</div>
+      <div class="vf-row" id="vw-row-cae"><div class="vf-label">CAE</div>
         <input class="vf-input" id="vw-cae"/></div>
-      <div class="vf-row"><div class="vf-label">Vencimiento CAE</div>
+      <div class="vf-row" id="vw-row-vcae"><div class="vf-label">Vencimiento CAE</div>
         <input class="vf-input" type="date" id="vw-vcae"/></div>
       <div class="vf-row"><div class="vf-label">Estado</div>
         <select class="vf-input" id="vw-estado">
@@ -1079,7 +1080,9 @@ tbody tr:last-child td{border-bottom:none}
       <div class="vf-row"><div class="vf-label">Concepto / Servicio</div>
         <input class="vf-input" id="vw-concepto" placeholder="Pauta publicitaria, Honorarios…"/></div>
       <div class="vf-row"><div class="vf-label">Período contable</div>
-        <input class="vf-input" type="month" id="vw-periodo" title="Mes y año del gasto"/></div>
+        <input class="vf-input" type="text" id="vw-periodo" placeholder="MM/AAAA"
+          maxlength="7" pattern="\d{2}/\d{4}"
+          style="font-family:monospace" title="Mes y año (MM/AAAA)"/></div>
       <div class="vf-row"><div class="vf-label">Categoría de Gasto</div>
         <select class="vf-input" id="vw-categoria">
           <option value="">— Seleccionar —</option>
@@ -1671,9 +1674,26 @@ async function loadFromSheets(showToast = true) {
     _lastSyncTime = Date.now();
     setSplashStatus(`${DB.invoices.length} facturas cargadas`, 90);
     // Pre-sincronizar proveedores en background
-    DB.invoices.forEach(i => syncProveedorDesdeFactura(i));
-    renderTable(); updateStats();
+    // Solo sincronizar proveedores que no existen aún (no en cada carga)
+    const _provs = loadProveedores();
+    const _nuevos = DB.invoices.filter(i => i.cuit && !_provs[String(i.cuit)]);
+    _nuevos.forEach(i => { try { syncProveedorDesdeFactura(i); } catch(e){} });
+    // Renderizar solo la tab activa para no bloquear la UI
+    // No re-renderizar si el usuario está escribiendo en algún campo
+    const _actEl = document.activeElement;
+    const _userTyping = _actEl && (
+      _actEl.tagName === 'INPUT' || _actEl.tagName === 'TEXTAREA' || _actEl.tagName === 'SELECT'
+    );
+    if (!_userTyping) {
+      updateStats();
+      renderTable();
+      const _tabActiva = document.querySelector('.tab.active')?.dataset?.tab;
+      if (_tabActiva === 'tab-pagar')       renderPagar();
+      if (_tabActiva === 'tab-pagadas')     renderPagadas();
+      if (_tabActiva === 'tab-proveedores') renderProveedores();
+    }
     if (showToast) toast(`${DB.invoices.length} facturas cargadas desde Google Sheets`, 'success');
+    setSplashReady();
     setSplashReady();
   } catch (err) {
     setSyncStatus('red', 'Error de conexión');
@@ -1731,7 +1751,7 @@ async function _flushSaveQueue() {
     }
     const ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
     setSyncStatus('green', `${DB.invoices.length} facturas — sync ${ahora}`);
-    _noChangeStreak = 0; _syncInterval = SYNC_MIN; _scheduleNextSync();
+    _scheduleNextSync();
     resolvers.forEach(r => r.resolve());
   } catch (err) {
     setSyncStatus('red', 'Error al guardar');
@@ -1794,91 +1814,86 @@ function updateLocalCache() {
 // MEJORA 19: SINCRONIZACIÓN INTELIGENTE
 // ═══════════════════════════════════════════════════════
 let _lastSyncCount     = 0;      // cantidad de facturas en la última sync
-let _lastSyncTime      = 0;      // timestamp de la última sync real
-let _syncInterval      = 60000;  // intervalo actual (empieza en 60s)
-let _noChangeStreak    = 0;      // rachas sin cambios para aumentar el intervalo
-let _userActiveRecently= true;   // el usuario tuvo actividad reciente
+let _lastSyncTime      = 0;
 let _syncTimer         = null;
+let _lastHash          = '';    // hash de la última versión conocida
+let _syncPaused        = false; // pausar sync mientras el usuario edita
 
-const SYNC_MIN  = 30000;   // mínimo: 30 segundos
-const SYNC_MAX  = 300000;  // máximo: 5 minutos
-const SYNC_STEP = 1.5;     // factor de aumento por racha sin cambios
+// ── Tiempo real: 5s activo, 30s background ────────────────────────────────────
+const SYNC_REALTIME   = 15000;  // 15s cuando hay actividad
+const SYNC_BACKGROUND = 60000;  // 60s en background
+let _userActiveRecently = true;
+let _lastActivity = Date.now();
 
-// Detectar actividad del usuario para resetear el intervalo
 ['mousemove','keydown','click','touchstart'].forEach(ev => {
   document.addEventListener(ev, () => {
-    if (!_userActiveRecently) {
-      _userActiveRecently = true;
-      _noChangeStreak     = 0;
-      _syncInterval       = 60000; // resetear a 60s cuando el usuario vuelve
-      _scheduleNextSync();
-    }
     _userActiveRecently = true;
+    _lastActivity = Date.now();
   }, { passive:true });
 });
 
-// Después de 2 minutos sin actividad, marcar como inactivo
-setInterval(() => { _userActiveRecently = false; }, 120000);
+// Marcar inactivo después de 2 minutos sin actividad
+setInterval(() => {
+  if (Date.now() - _lastActivity > 120000) _userActiveRecently = false;
+}, 15000);
 
 async function _smartSync() {
-  if (!SCRIPT_URL || _syncing) return;
+  if (!SCRIPT_URL || _syncing || _syncPaused) {
+    _scheduleNextSync();
+    return;
+  }
 
   try {
-    // Paso 1: ping liviano — solo pedir el count total
-    const pingRes = await fetch(
-      `${SCRIPT_URL}?action=ping`,
+    // Paso 1: pedir hash rápido — solo detecta si hay cambios
+    const hashRes = await fetch(
+      SCRIPT_URL + '?action=getHash&t=' + Date.now(),
       { method:'GET', redirect:'follow' }
     ).then(r => r.json()).catch(() => null);
 
-    if (!pingRes?.success) return;
+    if (!hashRes?.success) { _scheduleNextSync(); return; }
 
-    // Paso 2: ver si hay cambios comparando count
-    // (el ping actual devuelve { ok, ts } — usamos un getCount separado)
-    // Como no queremos cambiar el Apps Script, hacemos la sincronización
-    // comparando el count de la respuesta completa de manera eficiente:
-    // si no hay actividad del usuario Y no hubo cambios, aumentamos el intervalo
+    const nuevoHash = hashRes.data?.hash || '';
 
-    const now = Date.now();
-    const minsSinceSync = Math.round((now - _lastSyncTime) / 60000);
-
-    // Sincronizar si:
-    // a) Pasaron más de 5 minutos desde la última sync (forzado)
-    // b) El usuario estuvo activo recientemente
-    const debeSync = _userActiveRecently || (now - _lastSyncTime > SYNC_MAX);
-
-    if (!debeSync) {
-      // No sincronizar — solo actualizar el status con el tiempo transcurrido
-      const syncMins = minsSinceSync;
-      setSyncStatus('green',
-        `${DB.invoices.length} facturas — sync hace ${syncMins}min`);
+    if (nuevoHash && nuevoHash === _lastHash) {
+      // Sin cambios externos — actualizar label y reprogramar
+      const ts = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      setSyncStatus('green', DB.invoices.length + ' facturas — sync ' + ts);
       _scheduleNextSync();
       return;
     }
 
-    // Sincronización real
-    const prevCount = DB.invoices.length;
+    // No sincronizar si el usuario está interactuando activamente
+    if (_syncPaused) { _scheduleNextSync(); return; }
+    // Detectar si hay un campo activo con texto escrito o un select abierto
+    const _activeEl = document.activeElement;
+    const _isEditing = _activeEl && (
+      _activeEl.tagName === 'INPUT' || 
+      _activeEl.tagName === 'TEXTAREA' || 
+      _activeEl.tagName === 'SELECT'
+    ) && (_activeEl.value || _activeEl === document.activeElement);
+    if (_isEditing) { _scheduleNextSync(); return; }
+    const prevCount  = DB.invoices.length;
+    const prevIds    = new Set(DB.invoices.map(i => i.id));
     await loadFromSheets(false);
-    const newCount  = DB.invoices.length;
-    _lastSyncTime   = Date.now();
+    const newCount   = DB.invoices.length;
+    _lastHash        = nuevoHash;
+    _lastSyncTime    = Date.now();
 
-    if (newCount !== prevCount) {
-      // Hubo cambios — resetear backoff
-      _noChangeStreak = 0;
-      _syncInterval   = SYNC_MIN;
-      const diff = newCount - prevCount;
-      if (diff > 0) toast(`📥 ${diff} factura(s) nueva(s) detectada(s)`, 'info', 4000);
-    } else {
-      // Sin cambios — aumentar el intervalo si el usuario no está activo
-      if (!_userActiveRecently) {
-        _noChangeStreak++;
-        _syncInterval = Math.min(_syncInterval * SYNC_STEP, SYNC_MAX);
-      } else {
-        _syncInterval = SYNC_MIN;
-        _noChangeStreak = 0;
+    // Notificar al usuario si hay facturas nuevas de otro operador
+    if (newCount > prevCount) {
+      const nuevas = DB.invoices.filter(i => !prevIds.has(i.id));
+      const sesion = getSesion();
+      const propias = nuevas.filter(i =>
+        i.historial?.some(h => h.usuario === sesion?.usuario)
+      );
+      const deOtros = nuevas.length - propias.length;
+      if (deOtros > 0) {
+        toast('📥 ' + deOtros + ' factura(s) nueva(s) de otro usuario', 'info', 5000);
       }
     }
+
   } catch(e) {
-    console.warn('Smart sync error:', e);
+    console.warn('Sync error:', e.message);
   } finally {
     _scheduleNextSync();
   }
@@ -1886,15 +1901,13 @@ async function _smartSync() {
 
 function _scheduleNextSync() {
   if (_syncTimer) clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(_smartSync, _syncInterval);
-  // Mostrar próxima sync en el tooltip del status
-  const segs = Math.round(_syncInterval / 1000);
-  const label = segs < 60 ? `${segs}s` : `${Math.round(segs/60)}min`;
+  const intervalo = _userActiveRecently ? SYNC_REALTIME : SYNC_BACKGROUND;
+  _syncTimer = setTimeout(_smartSync, intervalo);
   const statusEl = document.querySelector('.sync-status');
-  if (statusEl) statusEl.title = `Próxima sincronización en ${label}`;
+  if (statusEl) statusEl.title = 'Sync cada ' + (intervalo/1000) + 's';
 }
 
-// Arrancar la sincronización inteligente
+// Arrancar sincronización
 _lastSyncTime = Date.now();
 _scheduleNextSync();
 
@@ -1967,8 +1980,8 @@ function esDocGenerico(inv) {
   return (inv.tipo||'') === 'Documento Genérico';
 }
 function tieneCae(inv) {
-  // Tickets y documentos genéricos no tienen CAE
-  return !esTicket(inv) && !esDocGenerico(inv);
+  return !esTicket(inv) && !esDocGenerico(inv) &&
+         (inv.tipo||'') !== 'Cupón de Póliza de Seguro';
 }
 function netoEfectivo(inv) {
   const neto = inv.neto != null ? inv.neto :
@@ -2176,22 +2189,65 @@ async function processAllOCR() {
     if(q.status==='done')continue;
     q.status='running';q.progress=0;renderQueue();
     try {
-      const images=await fileToImages(q.file);
-      let fullText='';
-      for(let p=0;p<images.length;p++){
-        const r=await runTesseract(images[p],pct=>{
-          q.progress=((p/images.length)+(pct/images.length))*100;
-          const b=document.getElementById(`bar-${i}`);if(b)b.style.width=q.progress+'%';
-        });
-        fullText+=(p>0?'\n\n--- PÁGINA '+(p+1)+' ---\n':'')+r.text;
+      // ── Extraer texto nativo del PDF (PDF.js) ────────────────────────────
+      let fullText = '';
+      let _usedNative = false;
+      try {
+        const _ab  = await q.file.arrayBuffer();
+        const _pdf = await pdfjsLib.getDocument({ data: new Uint8Array(_ab) }).promise;
+        let _native = '';
+        for (let p = 1; p <= _pdf.numPages; p++) {
+          try {
+            const _pg = await _pdf.getPage(p);
+            const _vp = _pg.getViewport({ scale: 1 });
+            const _ct = await _pg.getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false });
+            if (_ct.items.length === 0) continue;
+            // Agrupar por Y — tolerancia de 3px para considerar mismo renglón
+            const _lm = new Map();
+            for (const item of _ct.items) {
+              if (!item.str) continue;
+              const y = Math.round(item.transform[5] / 3) * 3;
+              if (!_lm.has(y)) _lm.set(y, []);
+              _lm.get(y).push({ x: item.transform[4], str: item.str });
+            }
+            // Ordenar de arriba hacia abajo (Y mayor = más arriba en PDF coords)
+            const _ys   = [..._lm.keys()].sort((a, b) => b - a);
+            const _pl   = _ys
+              .map(y => _lm.get(y).sort((a, b) => a.x - b.x).map(i => i.str).join(' ').trim())
+              .filter(l => l.length > 0);
+            _native += (p > 1 ? '\n\n--- PÁGINA ' + p + ' ---\n' : '') + _pl.join('\n');
+          } catch(pe) { console.warn('[OCR] Error página', p, pe.message); }
+        }
+        if (_native.replace(/\s/g, '').length > 50) {
+          fullText     = _native;
+          _usedNative  = true;
+          console.log('[OCR] Texto nativo OK:', _native.length, 'chars');
+        } else {
+          console.warn('[OCR] Texto nativo vacío, usando Tesseract');
+        }
+      } catch(e) {
+        console.warn('[OCR] PDF.js falló:', e.message);
       }
+      // ── Fallback: Tesseract (PDFs escaneados) ─────────────────────────────
+      if (!_usedNative) {
+        const images = await fileToImages(q.file);
+        for (let p = 0; p < images.length; p++) {
+          const r = await runTesseract(images[p], pct => {
+            q.progress = ((p / images.length) + (pct / images.length)) * 100;
+            const b = document.getElementById(`bar-${i}`); if (b) b.style.width = q.progress + '%';
+          });
+          fullText += (p > 0 ? '\n\n--- PÁGINA ' + (p+1) + ' ---\n' : '') + r.text;
+        }
+      }
+      console.log('[OCR TEXT]', fullText.slice(0, 600));
       const campos=extractFields(fullText);
       const warns=validateFields(campos);
       // Detectar concepto y período contable del texto OCR
       campos.concepto         = detectarConcepto(fullText);
       campos.periodo_contable = detectarPeriodo(fullText, campos.fecha_emision);
       // ── BLOQUEO FACTURA B ────────────────────────────────────────────
-      if (campos.tipo && /\bB\b/.test(campos.tipo)) {
+      if (campos.tipo && /\bB\b/.test(campos.tipo)
+          && !campos.tipo.includes('Cup') && !campos.tipo.includes('Débito')) {
         q.status = 'error';
         const alertEl = document.getElementById('dup-alert');
         const msgEl   = document.getElementById('dup-alert-msg');
@@ -2207,7 +2263,11 @@ async function processAllOCR() {
 
       // ── VALIDACIÓN CUIT RECEPTOR ─────────────────────────────────────
       // Verificar que la factura esté dirigida al CUIT propio (Radio Aconcagua)
-      if (campos.cuit_receptor && campos.cuit_receptor !== CUIT_PROPIO) {
+      // Excluir tipos que no tienen receptor estándar (cupones, tickets, genéricos)
+      const _sinReceptor = ['Cupón de Póliza de Seguro','Documento Genérico',
+        'Ticket Factura A','Ticket Nota de Crédito A','Ticket Nota de Débito A'];
+      if (campos.cuit_receptor && campos.cuit_receptor !== CUIT_PROPIO
+          && !_sinReceptor.includes(campos.tipo)) {
         q.status = 'error';
         const alertEl = document.getElementById('dup-alert');
         const msgEl   = document.getElementById('dup-alert-msg');
@@ -2311,7 +2371,7 @@ async function processAllOCR() {
 
       // Guardar inmediatamente en Sheets (con el link de Drive incluido)
       await saveInvoiceToSheets(inv);
-      syncProveedorDesdeFactura(inv);
+      try { syncProveedorDesdeFactura(inv); } catch(e) {}
       updateLocalCache();
       registrarAudit('carga', `Factura cargada: ${inv.numero_factura||'sin número'} — ${inv.proveedor||inv.cuit}`, {
         facturaId: inv.id, proveedor: inv.proveedor||'', importe: inv.total, campo: inv.tipo
@@ -2373,11 +2433,39 @@ async function runTesseract(canvas,onProgress) {
 // ═══════════════════════════════════════════════════════
 function extractFields(txt) {
   const t=txt||'';
+  const parseNumAR = s => {
+    if (!s) return null;
+    s = s.trim().replace(/[\$\s]/g, '');
+    // Formato argentino con puntos de miles: "15.237.252,07"
+    if (/^[\d\.]+,\d{2}$/.test(s)) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    // Formato sin punto de miles pero con coma decimal: "1200000,00"
+    } else if (/^\d+,\d{2}$/.test(s)) {
+      s = s.replace(',', '.');
+    // Formato anglosajón: "15,237,252.07"
+    } else if (/^[\d,]+\.\d{2}$/.test(s)) {
+      s = s.replace(/,/g, '');
+    } else {
+      // Fallback general
+      const puntos = (s.match(/\./g)||[]).length;
+      const comas  = (s.match(/,/g)||[]).length;
+      if (puntos > 1) s = s.replace(/\./g,'');
+      if (comas  > 1) s = s.replace(/,/g,'');
+      if (s.includes(',')) s = s.replace(',', '.');
+    }
+    const v = parseFloat(s);
+    return isNaN(v) ? null : v;
+  };
+
 
   // TIPO — Detección completa para facturas y notas de crédito/débito ARCA
   // Códigos ARCA: 01=FA, 02=NDA, 03=NCA, 006=FB, 007=NDB, 008=NCB,
   //               011=FC, 012=NDC, 013=NCC, 019=FE
   let tipo=null;
+  // ── Cupón de Póliza de Seguro (Sancor u otras aseguradoras) ─────────────────
+  if (/Cup[oó]n\s+de\s+Saldo|SANCOR\s+SEGUROS|Cup[oó]n\s+de\s+P[oó]liza|COD\.\s*PAGO\s*BANELCO/i.test(t)) {
+    tipo = 'Cupón de Póliza de Seguro';
+  }
 
   // ── Notas de Crédito (evaluar ANTES que facturas para evitar falsos positivos) ──
   if      (/\bA\s+NOTA\s+DE\s+CR[EÉ]DITO\b|NOTA\s+DE\s+CR[EÉ]DITO\s+A\b/i.test(t)) tipo='Nota de Crédito A';
@@ -2419,9 +2507,89 @@ function extractFields(txt) {
   else if (/COD\.\s*0*11\b/i.test(t))        tipo='Factura C';
   else if (/COD\.\s*0*19\b/i.test(t))        tipo='Factura E';
 
+  // ── Extracción especial para Cupón de Póliza de Seguro ─────────────────────
+  if (tipo === 'Cupón de Póliza de Seguro') {
+    // CUIT emisor: formato "C.U.I.T. N° 30-50004946-0"
+    const _cuitM = t.match(/C\.U\.I\.T\.\s*N[°º]?\s*([\d][\d\-]+[\d])/i);
+    const _cuitS = _cuitM ? _cuitM[1].replace(/\D/g,'') : '30500049460';
+
+    // Proveedor: identificar la aseguradora por CUIT o contexto
+    // CUIT 30-50004946-0 = Sancor Seguros S.A.
+    // El texto NO incluye el nombre "SANCOR" — solo "CASA CENTRAL" (sede)
+    let _prov = 'Aseguradora';
+    if (_cuitS === '30500049460') {
+      _prov = 'SANCOR COOPERATIVA DE SEGUROS LIMITADA';
+    } else if (/SANCOR/i.test(t)) {
+      _prov = 'SANCOR COOPERATIVA DE SEGUROS LIMITADA';
+    } else {
+      // Intentar extraer nombre de otra aseguradora del documento
+      const _otroNombre = t.match(/^([A-Z][A-ZÁÉÍÓÚÑ\s\.&]+(?:SEGUROS|SEGURO|CIA|COMPAÑÍA)[A-Z\s\.]*)/m);
+      _prov = _otroNombre ? _otroNombre[1].trim() : 'Aseguradora';
+    }
+
+    // Referencia: "99427859/0" → tomamos solo los dígitos antes de "/0"
+    // IMPORTANTE: evitar tomar números de póliza como 13320211
+    // La referencia aparece en la columna REFERENCIA/CERTIFICADO
+    const _refM = t.match(/REFERENCIA[^\n]*\n[\s\S]*?(\d{7,9})\/0/i)
+               || t.match(/(99\d{6})\/0/);  // referencias Sancor empiezan con 99
+    const _ref  = _refM ? _refM[1] : '';
+
+    // Cuota: "3/12" → tomamos el primer número
+    const _cuotaM = t.match(/(\d+)\s*\/\s*12/);
+    const _cuota  = _cuotaM ? _cuotaM[1] : '';
+
+    const _nroDoc = _ref && _cuota ? _ref + '-' + _cuota : _ref || '';
+
+    // Vigencia → buscar en el bloque "VIGENCIA DE LA CUOTA"
+    // (la primera fecha del doc es la del cupón, no la de vigencia)
+    const _vigBlock = t.match(/VIGENCIA\s+DE\s+LA\s*[\n\r]+CUOTA[\s\S]*?(\d{2}\/\d{2}\/\d{4})\s*[\n\r]+(\d{2}\/\d{2}\/\d{4})/i);
+    const _desde  = _vigBlock ? _vigBlock[1] : '';
+    const _hasta  = _vigBlock ? _vigBlock[2] : '';
+    // Extraer ramos/productos de la tabla del cupón
+    const _ramosM = [...t.matchAll(/\d{2}\/\d{2}\/\d{4}\n([^\n]+)\n\d+\n/g)].map(m => m[1].trim());
+    const _ramosStr = _ramosM.length ? _ramosM.join(' + ') : '';
+    const _conc   = _ramosStr
+      ? _ramosStr
+      : (_desde && _hasta
+          ? _prov + ' — Vigencia ' + _desde + ' al ' + _hasta
+          : 'Cupón de póliza de seguro');
+
+    // Total: buscar "TOTAL:\n14.019,00" (el total al pie, no el de la columna)
+    const _totalM = t.match(/\bTOTAL:\s*\n?\s*([\d\.]+,[\d]{2})/i);
+    const _total  = _totalM ? parseNumAR(_totalM[1]) : null;
+
+    // Fecha de emisión = VENC. CUOTA (fecha de la primera cuota mostrada)
+    const _fechaVencM = t.match(/VENC\.\s*CUOTA:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    const _fechaRaw   = _fechaVencM ? _fechaVencM[1] : (_fechas[0] || '');
+    const _fecha      = _fechaRaw
+      ? (p => p[2]+'-'+p[1]+'-'+p[0])(_fechaRaw.split('/'))
+      : null;
+
+    // Período contable → mes de inicio de vigencia
+    const _periodo = _desde
+      ? (p => p[2]+'-'+p[1])(_desde.split('/'))
+      : '';
+
+    return {
+      tipo,
+      cuit:            _cuitS,
+      cuit_receptor:   null,  // cupones no tienen validación de receptor
+      proveedor:       _prov,
+      condicion_iva:   'Responsable Inscripto',
+      numero_factura:  _nroDoc,
+      fecha_emision:   _fecha,
+      total:           _total,
+      neto:            _total,
+      iva21:           null, iva105: null, iva27: null,
+      otros:           null, percepciones: null,
+      cae:             null, vto_cae: null,
+      concepto:        _conc,
+      periodo_contable:_periodo,
+    };
+  }
+
   // CUIT — del EMISOR (proveedor que nos factura)
-  // El receptor (Radio Aconcagua) se valida por separado en validateFields
-  // Estrategia: el CUIT del emisor suele ser el PRIMERO que aparece en el documento
+  // Estrategia: buscar en la cabecera antes del bloque receptor
   let cuit = null;
   const _prefCuit = new Set(['20','23','24','27','30','33','34']);
   const _validaCuit = d => {
@@ -2432,48 +2600,65 @@ function extractFields(txt) {
     return dv===+d[10];
   };
 
-  // Paso 1: buscar "CUIT:" en la cabecera del emisor (antes del bloque receptor)
-  // El receptor suele aparecer después de "Avisador:", "Cliente:", "Cond. IVA:"
-  // Entonces el CUIT del EMISOR es el que aparece ANTES de esas palabras
-  const _receptorPos = t.search(/(?:Avisador|Cliente|Receptor|Cond\.\s*IVA\s*:|\bCond\.\s*IVA\b)/i);
-  const _cabeceraEmisora = _receptorPos > 0 ? t.slice(0, _receptorPos) : t.slice(0, 500);
+  // Determinar dónde empieza el bloque receptor
+  // Buscar: línea de guiones, "Avisador:", o "Cond. IVA:" del receptor
+  const _recvPos = t.search(/(?:_{10,}|Avisador\s*:|^Cond\.\s*IVA:\s*$)/im);
+  const _cabecera = _recvPos > 0 ? t.slice(0, _recvPos) : t.slice(0, 400);
 
-  // Buscar CUIT en la cabecera del emisor
-  const _cuitEmisM = _cabeceraEmisora.match(/CUIT\s*:\s*(\d{11})/i);
-  if (_cuitEmisM && _validaCuit(_cuitEmisM[1])) cuit = _cuitEmisM[1];
+  // Paso 1: buscar CUIT en la cabecera — varios formatos:
+  // "CUIT: 30719078369" / "C.U.I.T.: 30-71105773-7" / "CUIT:\n30719078369"
+  const _cuitCabM = _cabecera.match(/C(?:\.U\.I\.T\.|UIT)\s*:\s*\n?([\d\-]{11,14})/i);
+  if (_cuitCabM) {
+    const _raw = _cuitCabM[1].replace(/\D/g,'');
+    if (_raw.length === 11 && _validaCuit(_raw)) cuit = _raw;
+  }
 
-  // Si no, el primer número de 11 dígitos válido en la cabecera
+  // Paso 2: cualquier número de 11 dígitos válido en la cabecera
   if (!cuit) {
-    for (const m of _cabeceraEmisora.matchAll(/\b(\d{11})\b/g)) {
+    for (const m of _cabecera.matchAll(/\b(\d{11})\b/g)) {
       if (_prefCuit.has(m[1].slice(0,2)) && _validaCuit(m[1])) { cuit=m[1]; break; }
     }
   }
 
-  // Paso 2: primer "CUIT:" en todo el documento
+  // Paso 3: primer CUIT con label en todo el documento
   if (!cuit) {
-    const m = t.match(/CUIT\s*:\s*(\d{11})/i);
-    if (m && _validaCuit(m[1])) cuit = m[1];
+    const _todos = [...t.matchAll(/CUIT:\s*\n?(\d{11})/gi)];
+    for (const m of _todos) {
+      if (_validaCuit(m[1])) { cuit = m[1]; break; }
+    }
   }
 
-  // Paso 3: primer CUIT válido en el documento
+  // Paso 4: primer CUIT válido en el documento
   if (!cuit) {
     for (const m of t.matchAll(/\b(\d{11})\b/g)) {
       if (_prefCuit.has(m[1].slice(0,2)) && _validaCuit(m[1])) { cuit=m[1]; break; }
     }
   }
 
-  // Paso 4 (fallback sin validar DV)
+  // Paso 5 (fallback sin validar DV)
   if (!cuit) {
-    const m = t.match(/CUIT\s*:[\s\S]{0,5}(\d{11})/i);
+    const m = t.match(/CUIT:\s*\n?(\d{11})/i);
     if (m) cuit = m[1];
   }
 
   // Número factura
   let punto_venta=null,numero=null,numero_factura=null;
+  // Patrón 1: "Punto de Venta: XXXXX Comp. Nro: ZZZZZZZZ"
   const pvM=t.match(/Punto\s+de\s+Venta\s*:\s*(\d{1,5})\s+Comp\.?\s+Nro\s*:\s*(\d{1,8})/i);
   if(pvM){punto_venta=pvM[1].padStart(5,'0');numero=pvM[2].padStart(8,'0');}
-  else{const nm=t.match(/\b(\d{3,5})\s*[-]\s*(\d{6,8})\b/);
+  // Patrón 1b: "Compr.N°: 1001 - 00004362" (formato TRAMAT/otros)
+  if(!punto_venta){
+    const compM=t.match(/Compr\.N[°º]?:?\s*(\d{1,5})\s*[-–]\s*(\d{6,8})/i);
+    if(compM){punto_venta=compM[1].padStart(5,'0');numero=compM[2].padStart(8,'0');}
+  }
+  // Patrón 2: "XXXXX-ZZZZZZZZ" con guión
+  if(!punto_venta){const nm=t.match(/\b(\d{3,5})\s*[-]\s*(\d{6,8})\b/);
     if(nm){punto_venta=nm[1].padStart(5,'0');numero=nm[2].padStart(8,'0');}}
+  // Patrón 3: "XXXXXAZZZZZZZZ" sin guión
+  if(!punto_venta){
+    const nmL=t.match(/\b(\d{3,5})[A-Z](\d{6,8})\b/);
+    if(nmL){punto_venta=nmL[1].padStart(5,'0');numero=nmL[2].padStart(8,'0');}
+  }
   const tLetra={
     'Factura A':'A','Factura C':'C','Factura E':'E',
     'Nota de Crédito A':'A','Nota de Crédito C':'C','Nota de Crédito B':'B',
@@ -2485,9 +2670,11 @@ function extractFields(txt) {
   // Proveedor — nombre del EMISOR (quien factura)
   let proveedor=null;
 
-  // Paso 1: "Razón Social:" explícito
-  const rsM=t.match(/Raz[oó]n\s+Social\s*:\s*([A-Z][^\n]{3,100})/i);
-  if(rsM)proveedor=rsM[1].split(/\s{3,}|\t|(?=\s*(?:Fecha|CUIT|Cond|Dom))/i)[0].trim();
+  // Paso 1: "Razón Social:" explícito — en la cabecera del emisor
+  // Buscar dentro de la cabecera para no tomar la razón social del receptor
+  const _cabeceraRs = _recvPos > 0 ? t.slice(0, _recvPos) : t.slice(0, 500);
+  const rsM = _cabeceraRs.match(/Raz[oó]n\s+Social:\s*([^\n\r]{3,100}?)(?:\s{3,}|C\.U\.I\.T\.|$)/i);
+  if(rsM) proveedor = rsM[1].trim();
 
   // Paso 2: buscar en la cabecera del emisor (antes del bloque receptor)
   // El nombre del emisor suele ser las primeras líneas en mayúsculas
@@ -2496,12 +2683,14 @@ function extractFields(txt) {
     const cabecera = cabeceraPos > 0 ? t.slice(0, cabeceraPos) : t.slice(0, 600);
     const lines = cabecera.split('\n');
     const excluir = /^(ORIGINAL|DUPLICADO|TRIPLICADO|FACTURA|NOTA|COD\.|PAG\.|FECHA|A$|B$|C$|E$|X$|CODIGO|NRO\.|COMPROBANTE)/i;
-    const excluirContenido = /CUIT|FECHA|IVA|AFIP|IIBB|INICIO|ESTABLECIMIENTO|SEDE|TIMBRADO|INGRESOS|BRUTOS|DEFENSA/i;
+    const excluirContenido = /CUIT|FECHA|IVA|AFIP|IIBB|INICIO|ESTABLECIMIENTO|SEDE|TIMBRADO|INGRESOS|BRUTOS|DEFENSA|CTE\.SALAS|SAN RAFAEL/i;
+    const excluirLinea1 = /^(A|B|C|E|X|FACTURA|ORIGINAL|DUPLICADO|TRIPLICADO|CODIGO|NRO\.|TEMA|MEDIO|DETALLE)$/i;
     for(const l of lines){
       const s=l.trim();
       if(s.length>4 && s.length<80
         && !excluir.test(s)
         && !excluirContenido.test(s)
+        && !excluirLinea1.test(s)
         && /[A-ZÁÉÍÓÚ]{3}/.test(s)
         && !/^[\d\/\s\-\.]+$/.test(s)
         && !/^\d/.test(s)){
@@ -2524,23 +2713,25 @@ function extractFields(txt) {
 
   // Fecha emisión — ESTRATEGIA MÁS FRECUENTE
   let fecha_emision=null;
+  // Patrón 1: "Fecha de Emisión: DD/MM/YYYY"
   const feInline=t.match(/Fecha\s+de\s+Emisi[oó]n\s*:\s*(\d{1,2}\/\d{2}\/\d{4})/i);
-  if(feInline){fecha_emision=parseDate(feInline[1]);}
+  if(feInline) fecha_emision=parseDate(feInline[1]);
+  // Patrón 2: "FECHA: DD/MM/YYYY" en cualquier posición de línea
+  if(!fecha_emision){
+    const feLabel=t.match(/\bFECHA:\s*(\d{1,2}\/\d{2}\/\d{4})/i);
+    if(feLabel) fecha_emision=parseDate(feLabel[1]);
+  }
+  // Patrón 3: "Fecha de Emisión:" con salto de línea
   if(!fecha_emision){
     const feSalto=t.match(/Fecha\s+de\s+Emisi[oó]n\s*:\s*[\n\r]+[\s\S]{0,200}?(\d{2}\/\d{2}\/\d{4})/i);
-    if(feSalto)fecha_emision=parseDate(feSalto[1]);
+    if(feSalto) fecha_emision=parseDate(feSalto[1]);
   }
+  // Patrón 4: primera fecha del documento (excluyendo fechas de CAE/vencimiento)
   if(!fecha_emision){
-    const todas=[...t.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)].map(m=>m[1]);
-    if(todas.length){
-      const cnt={};todas.forEach(f=>cnt[f]=(cnt[f]||0)+1);
-      const sorted=Object.entries(cnt).sort((a,b)=>{
-        if(b[1]!==a[1])return b[1]-a[1];
-        return new Date(b[0].split('/').reverse().join('-'))
-               -new Date(a[0].split('/').reverse().join('-'));
-      });
-      fecha_emision=parseDate(sorted[0][0]);
-    }
+    // Excluir fechas que están cerca de "CAE" o "Vto" o "INICIO ACT"
+    const textoSinCae = t.replace(/(?:CAE|Vto|Vencimiento|INICIO\s+ACT)[^\n]*\d{2}\/\d{2}\/\d{4}/gi,'');
+    const primeraFecha = textoSinCae.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+    if(primeraFecha) fecha_emision=parseDate(primeraFecha[1]);
   }
 
   // Condición IVA
@@ -2563,29 +2754,6 @@ function extractFields(txt) {
   };
 
   // Mejorar parseNum para formato argentino: $15.237.252,07 (puntos=miles, coma=decimal)
-  const parseNumAR = s => {
-    if (!s) return null;
-    s = s.trim().replace(/[\$\s]/g, '');
-    // Formato argentino con puntos de miles: "15.237.252,07"
-    if (/^[\d\.]+,\d{2}$/.test(s)) {
-      s = s.replace(/\./g, '').replace(',', '.');
-    // Formato sin punto de miles pero con coma decimal: "1200000,00"
-    } else if (/^\d+,\d{2}$/.test(s)) {
-      s = s.replace(',', '.');
-    // Formato anglosajón: "15,237,252.07"
-    } else if (/^[\d,]+\.\d{2}$/.test(s)) {
-      s = s.replace(/,/g, '');
-    } else {
-      // Fallback general
-      const puntos = (s.match(/\./g)||[]).length;
-      const comas  = (s.match(/,/g)||[]).length;
-      if (puntos > 1) s = s.replace(/\./g,'');
-      if (comas  > 1) s = s.replace(/,/g,'');
-      if (s.includes(',')) s = s.replace(',', '.');
-    }
-    const v = parseFloat(s);
-    return isNaN(v) ? null : v;
-  };
 
   // Patrón que captura montos con formato "$15.237.252,07" o "15237252,07"
   const findNumAR = patterns => {
@@ -2604,6 +2772,8 @@ function extractFields(txt) {
   let _tblNeto=null, _tblIva21=null, _tblTotal=null, _tblPct=null;
   const _tblMatch = t.match(
     /NETO\s+%?\s*IVA\s+IMPORTE\s+IVA\s+TOTAL\s+\$?\s*([\d\.]+,[\d]{2})\s+(\d{1,2})%\s+\$?\s*([\d\.]+,[\d]{2})\s+\$?\s*([\d\.]+,[\d]{2})/i
+  ) || t.match(
+    /\$?\s*([\d\.]+,[\d]{2})\s+(\d{1,2})%\s+\$?\s*([\d\.]+,[\d]{2})\s+\$?\s*([\d\.]+,[\d]{2})\s*$/im
   );
   if (_tblMatch) {
     _tblNeto  = parseNumAR(_tblMatch[1]);
@@ -2617,14 +2787,19 @@ function extractFields(txt) {
     /NETO\s*GRAVADO\s*:?\s*\$?\s*([\d\.]+,[\d]{2})/i,
     /BASE\s*IMPONIBLE\s*:?\s*\$?\s*([\d\.]+,[\d]{2})/i,
     /\bNETO\b[^\n]*\n\s*\$?\s*([\d\.]+,[\d]{2})/i,
-    /Subtotal\s*:\s*\$?\s*([\d\.]+,[\d]{2})/i,   // Factura C monotributo
+    /Subtotal\s*:\s*\$?\s*([\d\.]+,[\d]{2})/i,
+    // "IMPORTE $ 100.000,00 \nNETO" — importe en línea anterior a NETO
+    /IMPORTE\s+\$\s*([\d\.]+,[\d]{2})\s*\nNETO/i,
+    /IMPORTE\s+NETO\s*\$?\s*([\d\.]+,[\d]{2})/i,
   ]);
 
   // IVA 21%: prioridad a tabla, luego patrones
   const iva21 = (_tblPct===21 ? _tblIva21 : null) || findNumAR([
     /I\.?V\.?A\.?\s*21\s*%?\s*:?\s*\$?\s*([\d\.]+,[\d]{2})/i,
-    /21\s*%[^\n]*\n\s*\$?\s*([\d\.]+,[\d]{2})/i,
-    /IMPORTE\s*IVA[^\n]*\n\s*\$?\s*([\d\.]+,[\d]{2})/i,
+    /21\s*%[^\n\$]*\n?\s*\$?\s*([\d\.]+,[\d]{2})/i,
+    /IMPORTE\s*IVA[^\n]*\n?\s*\$?\s*([\d\.]+,[\d]{2})/i,
+    // Tesseract: "21%\n$ 3.199.822,93" con salto de línea
+    /\b21\s*%\s*\n\s*\$?\s*([\d\.]+,[\d]{2})/i,
   ]);
 
   const iva105 = (_tblPct===10 || _tblPct===11 ? _tblIva21 : null) || findNumAR([
@@ -2669,15 +2844,22 @@ function extractFields(txt) {
 
   // CAE
   let cae=null;
-  const caeM=t.match(/CAE\s*N[°o]?\s*:?\s*[\s\S]{0,80}?(\d{14})/i);
+  const caeM=t.match(/CAE\s*N[°oº]?\s*:?\s*([\d\s]{14,17})/i)||t.match(/\bCAE\b\s*:?\s*([\d]{14})/i);
+  if(caeM){ cae = caeM[1].replace(/\s/g,'').slice(0,14); }
   if(caeM){cae=caeM[1];}else{const c14=t.match(/\b(\d{14})\b/);if(c14)cae=c14[1];}
 
   // VTO CAE
   let vto_cae=null;
-  const vtoCaeM=t.match(/(?:Vto\.?\s+de\s+CAE|Vencimiento\s+CAE|Fecha\s+de\s+Vto\.?\s+de\s+CAE)\s*:?\s*[\n\r\s]*([\d]{1,2}\/[\d]{2}\/[\d]{4})/i);
+  const vtoCaeM=t.match(/(?:Fecha\s+(?:de\s+)?Vto\.?\s*(?:de\s+)?CAE|Vto\.?\s+de\s+CAE|Vencimiento\s+CAE|Fecha\s+de\s+Vencimiento\s+CAE)\s*:?\s*[\n\r\s]*([\d]{1,2}\/[\d]{2}\/[\d]{4})/i);
   if(vtoCaeM){vto_cae=parseDate(vtoCaeM[1]);}
-  else{const compM=t.match(/Comprobante\s+Autorizado[\s\S]{0,30}?\n[\s]*(\d{2}\/\d{2}\/\d{4})/i);
-    if(compM)vto_cae=parseDate(compM[1]);}
+  else{
+    // Buscar fecha después de "CAE: XXXXXX"
+    const postCae=t.match(/\bCAE\b[^\n]*\n[^\n]*\n?\s*([\d]{1,2}\/[\d]{2}\/[\d]{4})/i);
+    if(postCae)vto_cae=parseDate(postCae[1]);
+    else{const compM=t.match(/Comprobante\s+Autorizado[\s\S]{0,30}?\n[\s]*(\d{2}\/\d{2}\/\d{4})/i);
+      if(compM)vto_cae=parseDate(compM[1]);
+    }
+  }
 
   // Si hay total pero sin neto y sin ningún IVA -> factura sin IVA -> neto = total
   const netoFinal = neto != null ? neto :
@@ -2717,7 +2899,9 @@ function validateFields(c) {
   if(!c.numero_factura)w.push('⚠ No se detectó el número de factura');
   if(!c.total)w.push('⚠ No se detectó el importe total');
   if(!c.fecha_emision)w.push('⚠ No se detectó la fecha de emisión');
-  if(!c.cae)w.push('⚠ No se detectó el CAE');
+  if(!c.cae && c.tipo !== 'Cupón de Póliza de Seguro'
+     && !esTicket({tipo:c.tipo}) && !esDocGenerico({tipo:c.tipo}))
+    w.push('⚠ No se detectó el CAE');
   if(!c.tipo)w.push('⚠ No se detectó el tipo de comprobante');
   if(c.total&&(c.neto||c.iva21||c.iva105)){
     const suma=(c.neto||0)+(c.iva21||0)+(c.iva105||0)+(c.iva27||0)+(c.otros||0)+(c.percepciones||0);
@@ -3109,12 +3293,14 @@ document.getElementById('btn-toggle-viewer').addEventListener('click', toggleVie
 document.getElementById('btn-close-viewer').addEventListener('click',closeViewer);
 
 function closeViewer(){
+  _syncPaused = false; // reanudar sync al cerrar el visor
   _viewerId=null;
   document.getElementById('viewer-panel').classList.add('collapsed');
   document.querySelectorAll('tr.selected').forEach(r=>r.classList.remove('selected'));
 }
 
 function openViewer(id, readonly=false) {
+  _syncPaused = true; // pausar sync mientras el visor está abierto
   window._viewerReadonly = readonly;
   const inv=DB.invoices.find(i=>i.id===id);if(!inv)return;
   _viewerId=id;
@@ -3158,10 +3344,16 @@ function openViewer(id, readonly=false) {
   // Mostrar total en el visor: número sin formato (el usuario puede editarlo)
   const _totalVisor = totalEfectivo(inv);
   set('vw-total', _totalVisor != null ? String(_totalVisor) : '');
+  // Mostrar/ocultar CAE según tipo
+  const _conCae = tieneCae(inv);
+  ['vw-row-cae','vw-row-vcae'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = _conCae ? '' : 'none';
+  });
   set('vw-cae',inv.cae);
   set('vw-vcae',toDateInput(inv.vto_cae));set('vw-estado',inv.estado_rev||'PENDIENTE');
   set('vw-concepto',   inv.concepto||'');
-  set('vw-periodo',    inv.periodo_contable||'');
+  set('vw-periodo',    periodoToInput(inv.periodo_contable||''));
   set('vw-categoria',  inv.categoria||'');
   set('vw-centro',     inv.centro_costo||'');
   set('vw-obs-txt',inv.observaciones);set('vw-ocrtxt',inv.ocr_texto||'(Sin texto OCR)');
@@ -3415,7 +3607,7 @@ document.getElementById('btn-vw-save').addEventListener('click', async ()=>{
     iva27:getN('vw-iva27'),otros:getN('vw-otros'),percepciones:getN('vw-perc'),
     total:getN('vw-total'),cae:getV('vw-cae'),vto_cae:getD('vw-vcae'),
     estado_rev:getV('vw-estado'),concepto:getV('vw-concepto'),
-    periodo_contable:getV('vw-periodo'),categoria:getV('vw-categoria'),
+    periodo_contable:inputToPeriodo(getV('vw-periodo')),categoria:getV('vw-categoria'),
     centro_costo:getV('vw-centro'),observaciones:getV('vw-obs-txt'),
   };
   const camposLabel={numero_factura:'Nro. Factura',tipo:'Tipo',cuit:'CUIT',
@@ -3458,14 +3650,56 @@ document.getElementById('btn-vw-reocr')?.addEventListener('click', async () => {
   toast('Re-procesando OCR…', 'info', 2000);
 
   try {
-    const images = await fileToImages(inv._blob);
+    // Intentar extraer texto nativo del PDF (más preciso que Tesseract)
     let fullText = '';
-    for (let p = 0; p < images.length; p++) {
-      const r = await runTesseract(images[p], () => {});
-      fullText += (p > 0 ? '\n\n--- PÁGINA ' + (p+1) + ' ---\n' : '') + r.text;
+    let usedNativeText = false;
+    try {
+      const arrayBuf = await inv._blob.arrayBuffer();
+      const pdfDoc   = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuf) }).promise;
+      console.log('[OCR] PDF páginas:', pdfDoc.numPages);
+      let nativeText = '';
+      for (let p = 1; p <= pdfDoc.numPages; p++) {
+        const page    = await pdfDoc.getPage(p);
+        const content = await page.getTextContent({ normalizeWhitespace: true });
+        console.log('[OCR] Items página', p, ':', content.items.length);
+        // Agrupar items por posición Y (mismo renglón = misma línea)
+        const lineMap = new Map();
+        for (const item of content.items) {
+          if (!item.str.trim()) continue;
+          const y = Math.round(item.transform[5]);
+          if (!lineMap.has(y)) lineMap.set(y, []);
+          lineMap.get(y).push({ x: item.transform[4], str: item.str });
+        }
+        // Ordenar líneas de arriba hacia abajo (Y mayor = más arriba en PDF)
+        const sortedYs = [...lineMap.keys()].sort((a,b) => b - a);
+        const pageLines = sortedYs.map(y => {
+          const items = lineMap.get(y).sort((a,b) => a.x - b.x);
+          return items.map(i => i.str).join(' ').trim();
+        }).filter(l => l.length > 0);
+        nativeText += (p > 1 ? '\n\n--- PÁGINA ' + p + ' ---\n' : '') + pageLines.join('\n');
+      }
+      console.log('[OCR] Texto nativo largo:', nativeText.replace(/\s/g,'').length);
+      if (nativeText.replace(/\s/g,'').length > 100) {
+        fullText = nativeText;
+        usedNativeText = true;
+        console.log('[OCR] USANDO TEXTO NATIVO');
+      }
+    } catch(e) {
+      console.warn('[OCR] Error texto nativo:', e.message, e.stack);
+    }
+
+    // Si no hay texto nativo, usar Tesseract (PDF escaneado)
+    if (!usedNativeText) {
+      const images = await fileToImages(inv._blob);
+      for (let p = 0; p < images.length; p++) {
+        const r = await runTesseract(images[p], () => {});
+        fullText += (p > 0 ? '\n\n--- PÁGINA ' + (p+1) + ' ---\n' : '') + r.text;
+      }
+      console.log('[OCR] Texto Tesseract usado');
     }
 
     // Extraer campos del nuevo texto
+    console.log('[OCR TEXT]', fullText.slice(0,600));
     const campos   = extractFields(fullText);
     const warns    = validateFields(campos);
     const fechaAhora = new Date().toLocaleString('es-AR');
@@ -3592,12 +3826,40 @@ document.getElementById('btn-export-excel').addEventListener('click',()=>saveExc
 let _pagarPage = 1;
 const PAGAR_SZ = 50;
 
+let _badgeTimer = null;
+function _actualizarBadgePagar() {
+  const pendAprobacion = DB.invoices.filter(i =>
+    i.estado_rev === 'PEND. APROBACIÓN'
+  ).length;
+  const badge = document.getElementById('badge-pagar');
+  if (!badge) return;
+  if (pendAprobacion > 0) {
+    badge.textContent = pendAprobacion;
+    badge.style.display = 'inline';
+    badge.style.opacity = '1';
+    // Desvanecer después de 4 segundos
+    if (_badgeTimer) clearTimeout(_badgeTimer);
+    _badgeTimer = setTimeout(() => {
+      badge.style.opacity = '0';
+      setTimeout(() => { badge.style.display = 'none'; }, 1000);
+    }, 4000);
+  } else {
+    badge.style.opacity = '0';
+    badge.style.display = 'none';
+  }
+}
+
 function renderPagar() {
   const q = (document.getElementById('search-pagar')||{value:''}).value.toLowerCase();
   const items = DB.invoices.filter(i =>
     (['REVISADA','PAGO PARCIAL','CANJE PARCIAL','PEND. APROBACIÓN'].includes(i.estado_rev)) &&
     _matchSearch(i,q)
   );
+
+  // Aprobador ve primero las que necesitan su aprobación
+  if (puedo('aprobar_pago') && !puedo('configurar_pago')) {
+    items.sort((a,b) => (a.estado_rev==='PEND. APROBACIÓN'?0:1) - (b.estado_rev==='PEND. APROBACIÓN'?0:1));
+  }
 
   // Resumen
   const totalImporte  = items.reduce((a,i)=>a+(totalEfectivo(i)||0),0);
@@ -3616,6 +3878,23 @@ function renderPagar() {
       <div style="font-size:11px;color:#f97316;margin-top:2px">${fmtMoney(totalPendApro)}</div>
     </div>` : ''}
   `;
+  // Aviso para aprobador — reusar el mismo div, no acumular
+  let avisoEl = document.getElementById('aviso-aprobador');
+  if (pendAprobacion.length > 0 && puedo('aprobar_pago')) {
+    if (!avisoEl) {
+      avisoEl = document.createElement('div');
+      avisoEl.id = 'aviso-aprobador';
+      avisoEl.style.cssText = 'background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.35);border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px';
+      const summaryEl = document.getElementById('pagar-summary');
+      if (summaryEl) summaryEl.insertAdjacentElement('afterend', avisoEl);
+    }
+    avisoEl.innerHTML = '<span style="font-size:16px">⏳</span><div><strong style="color:#f97316">' + pendAprobacion.length + ' factura(s) esperando aprobación</strong>' +
+      '<div style="font-size:12px;color:var(--muted);margin-top:2px">Seleccionalas y usá ✅ Aprobar seleccionadas.</div></div>';
+    avisoEl.style.display = 'flex';
+  } else if (avisoEl) {
+    avisoEl.style.display = 'none';
+  }
+
 
   const sorted = _sortItems(items, _pagarSort.col, _pagarSort.desc);
   _updateSortHeaders('pagar-table', _pagarSort.col, _pagarSort.desc);
@@ -3693,25 +3972,34 @@ document.getElementById('btn-pagar-all')?.addEventListener('click', async () => 
     .map(cb => parseInt(cb.dataset.id));
   if (!seleccionados.length) { toast('Seleccioná al menos una factura','warn'); return; }
 
-  // Todas las facturas requieren configuración de pago
+  // Verificar que todas tengan configuración de pago
   const sinConfigurar = seleccionados.filter(id => {
     const inv = DB.invoices.find(i=>i.id===id);
-    // Las que están en PEND. APROBACIÓN ya están configuradas
     return !getConfigPago(id) && inv?.estado_rev !== 'PEND. APROBACIÓN';
   });
-
   if (sinConfigurar.length) {
-    toast(sinConfigurar.length + ' factura(s) no tienen configuración de pago. Usá ⚙ para configurar cada una antes de generar la orden.', 'warn', 6000);
-    // Resaltar las que faltan configurar
+    toast(sinConfigurar.length + ' factura(s) sin configuración de pago. Usá ⚙ para configurar.', 'warn', 5000);
     sinConfigurar.forEach(id => {
       const row = document.querySelector(`tr[data-id="${id}"]`);
-      if (row) {
-        row.style.outline = '2px solid var(--red)';
-        setTimeout(() => row.style.outline = '', 3000);
-      }
+      if (row) { row.style.outline = '2px solid var(--red)'; setTimeout(() => row.style.outline = '', 3000); }
     });
     return;
   }
+
+  // MEJORA: verificar que todas estén aprobadas (PEND. APROBACIÓN)
+  const sinAprobar = seleccionados.filter(id => {
+    const inv = DB.invoices.find(i=>i.id===id);
+    return inv?.estado_rev !== 'PEND. APROBACIÓN';
+  });
+  if (sinAprobar.length) {
+    toast('⚠ ' + sinAprobar.length + ' factura(s) aún no están aprobadas. El aprobador debe confirmarlas antes de generar la orden.', 'warn', 6000);
+    sinAprobar.forEach(id => {
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) { row.style.outline = '2px solid var(--yellow)'; setTimeout(() => row.style.outline = '', 3000); }
+    });
+    return;
+  }
+
   await abrirPreviewOrdenPagoConfigurado(seleccionados);
 });
 
@@ -3864,11 +4152,14 @@ function _renderPagination(containerId, page, pages, onGo) {
 // ═══════════════════════════════════════════════════════
 let _splashReady = false;
 
+let _splashPct = 0;
 function setSplashStatus(text, pct) {
   const fill = document.getElementById('splash-fill');
   const stat = document.getElementById('splash-status');
-  if (fill) fill.style.width = pct + '%';
-  if (stat) stat.textContent = text;
+  // Solo avanzar, nunca retroceder
+  if (pct !== undefined) _splashPct = Math.max(_splashPct, pct);
+  if (fill) fill.style.width = _splashPct + '%';
+  if (stat && text) stat.textContent = text;
 }
 function setSplashReady() {
   if (_splashReady) return;
@@ -3928,7 +4219,7 @@ function guardarManual() {
     cuit, proveedor, condicion_iva:getV('m-condiva'), fecha_emision:fecha,
     neto:netoFinal, iva21, iva105, iva27, otros:getN('m-otros'), percepciones:null,
     total, cae:getV('m-cae'), vto_cae:getD('m-vcae'),
-    concepto:getV('m-concepto'), periodo_contable:getV('m-periodo'),
+    concepto:getV('m-concepto'), periodo_contable:inputToPeriodo(getV('m-periodo')),
     categoria:getV('m-categoria'), centro_costo:getV('m-centro'),
     observaciones:'Cargada manualmente',
     ocr_texto:'', advertencias:[], archivo_nombre:'', archivo_tipo:'',
@@ -4964,35 +5255,76 @@ const LS_KEY_PAGOS   = 'facturas_ocr_pagos';
 const LS_KEY_CONFIG  = 'facturas_ocr_config_pago'; // configuraciones pendientes de aprobación
 let _provSeleccionado = null;
 
+let _proveedoresCache = null;
+
 function loadProveedores() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_PROV) || '{}'); }
-  catch { return {}; }
+  if (_proveedoresCache) return _proveedoresCache;
+  try {
+    const raw = localStorage.getItem(LS_KEY_PROV);
+    if (raw) { _proveedoresCache = JSON.parse(raw); return _proveedoresCache; }
+  } catch {}
+  return {};
 }
+
 function saveProveedores(data) {
+  _proveedoresCache = data;
   localStorage.setItem(LS_KEY_PROV, JSON.stringify(data));
+  // Sincronizar a Sheets en background
+  if (SCRIPT_URL) {
+    apiCall('saveProveedores', { proveedores: data }).catch(e =>
+      console.warn('Error sincronizando proveedores:', e)
+    );
+  }
+}
+
+async function loadProveedoresFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await apiCall('getProveedores', {});
+    if (res?.proveedores && Object.keys(res.proveedores).length) {
+      _proveedoresCache = res.proveedores;
+      localStorage.setItem(LS_KEY_PROV, JSON.stringify(res.proveedores));
+    }
+  } catch(e) {
+    console.warn('Error cargando proveedores desde Sheets:', e);
+  }
 }
 
 function syncProveedorDesdeFactura(inv) {
-  if (!inv.cuit) return;
-  const cuit  = String(inv.cuit||'').trim();
-  if (!cuit)  return;
-  const provs = loadProveedores();
-  if (!provs[cuit]) {
-    provs[cuit] = {
-      cuit,
-      nombre:        inv.proveedor||'',
-      condicion_iva: inv.condicion_iva||'',
-      telefono:'', mail:'', cbu:'', notas:'',
-      fecha_alta:    new Date().toISOString(),
-    };
-  } else {
-    // Actualizar nombre si llegó con más info
-    if (inv.proveedor && inv.proveedor.length > (provs[cuit].nombre||'').length)
-      provs[cuit].nombre = inv.proveedor;
-    if (inv.condicion_iva && !provs[cuit].condicion_iva)
-      provs[cuit].condicion_iva = inv.condicion_iva;
+  // Ejecutar en background — nunca debe bloquear la carga de facturas
+  try {
+    if (!inv?.cuit) return;
+    const cuit  = String(inv.cuit).trim();
+    if (!cuit)   return;
+    const provs = loadProveedores();
+    if (!provs[cuit]) {
+      provs[cuit] = {
+        cuit,
+        nombre:        inv.proveedor||'',
+        condicion_iva: inv.condicion_iva||'',
+        telefono:'', mail:'', cbu:'', notas:'',
+        fecha_alta:    new Date().toISOString(),
+      };
+    } else {
+      if (inv.proveedor && inv.proveedor.length > (provs[cuit].nombre||'').length)
+        provs[cuit].nombre = inv.proveedor;
+      if (inv.condicion_iva && !provs[cuit].condicion_iva)
+        provs[cuit].condicion_iva = inv.condicion_iva;
+    }
+    // Guardar solo en localStorage — el sync a Sheets se hace en batch aparte
+    _proveedoresCache = provs;
+    localStorage.setItem(LS_KEY_PROV, JSON.stringify(provs));
+    // Sync a Sheets en background sin bloquear ni propagar errores
+    if (SCRIPT_URL) {
+      setTimeout(() => {
+        apiCall('saveProveedores', { proveedores: provs })
+          .catch(() => {}); // silenciar error — no es crítico
+      }, 0);
+    }
+  } catch(e) {
+    // Nunca propagar — sync de proveedor no es crítico
+    console.warn('syncProveedorDesdeFactura:', e.message);
   }
-  saveProveedores(provs);
 }
 
 function getDatosProv(cuit) {
@@ -5383,14 +5715,50 @@ function eliminarProv(cuit) {
 const LS_KEY_AUDIT = 'facturas_ocr_auditoria';
 const AUDIT_MAX    = 2000; // máximo de registros en el log
 
+let _auditCache = null;
+
 function loadAuditLog() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_AUDIT)||'[]'); }
-  catch { return []; }
+  if (_auditCache) return _auditCache;
+  try { _auditCache = JSON.parse(localStorage.getItem(LS_KEY_AUDIT)||'[]'); }
+  catch { _auditCache = []; }
+  return _auditCache;
 }
+
 function saveAuditLog(log) {
-  // Mantener solo los últimos AUDIT_MAX registros
   const truncated = log.slice(-AUDIT_MAX);
+  _auditCache = truncated;
   localStorage.setItem(LS_KEY_AUDIT, JSON.stringify(truncated));
+  // Sync a Sheets cada 10 registros nuevos (no en cada acción para no saturar)
+  if (SCRIPT_URL && truncated.length % 10 === 0) {
+    apiCall('saveAuditoria', { log: truncated }).catch(e => console.warn('Error sync audit:', e));
+  }
+}
+
+async function flushAuditToSheets() {
+  // Forzar sync inmediato del log completo (ej: al cerrar sesión)
+  if (!SCRIPT_URL) return;
+  const log = loadAuditLog();
+  if (log.length) {
+    apiCall('saveAuditoria', { log }).catch(e => console.warn('Error flush audit:', e));
+  }
+}
+
+async function loadAuditoriaFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await apiCall('getAuditoria', {});
+    if (res?.log?.length) {
+      // Fusionar: combinar Sheets + local, deduplicar por id, ordenar
+      const localLog  = loadAuditLog();
+      const sheetsLog = res.log;
+      const todos     = [...sheetsLog, ...localLog];
+      const uniq      = Object.values(
+        Object.fromEntries(todos.map(e => [e.id, e]))
+      ).sort((a,b) => a.id - b.id).slice(-AUDIT_MAX);
+      _auditCache = uniq;
+      localStorage.setItem(LS_KEY_AUDIT, JSON.stringify(uniq));
+    }
+  } catch(e) { console.warn('Error cargando auditoría:', e); }
 }
 
 // Tipos de acción con ícono y categoría
@@ -5694,21 +6062,45 @@ async function importarProveedoresExcel(input) {
 // PAGOS PARCIALES
 // ═══════════════════════════════════════════════════════
 
-// Persistencia de pagos en localStorage (independiente de Sheets)
-function loadPagosLS() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_PAGOS)||'{}'); } catch { return {}; }
+// Persistencia de pagos — localStorage + Sheets
+let _pagosCache = null;
+
+function _getPagosAll() {
+  if (_pagosCache) return _pagosCache;
+  try { _pagosCache = JSON.parse(localStorage.getItem(LS_KEY_PAGOS)||'{}'); }
+  catch { _pagosCache = {}; }
+  return _pagosCache;
 }
-function savePagosLS(data) {
+
+function _savePagosAll(data) {
+  _pagosCache = data;
   localStorage.setItem(LS_KEY_PAGOS, JSON.stringify(data));
+  if (SCRIPT_URL) {
+    apiCall('savePagos', { pagos: data }).catch(e => console.warn('Error sync pagos:', e));
+  }
 }
+
+function loadPagosLS() { return _getPagosAll(); }
+function savePagosLS(data) { _savePagosAll(data); }
+
 function getPagosLS(facturaId) {
-  const all = loadPagosLS();
-  return all[String(facturaId)] || null; // null = no hay override en LS
+  return _getPagosAll()[String(facturaId)] || null;
 }
 function setPagosLS(facturaId, pagos) {
-  const all = loadPagosLS();
+  const all = _getPagosAll();
   all[String(facturaId)] = pagos;
-  savePagosLS(all);
+  _savePagosAll(all);
+}
+
+async function loadPagosFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await apiCall('getPagos', {});
+    if (res?.pagos && Object.keys(res.pagos).length) {
+      _pagosCache = res.pagos;
+      localStorage.setItem(LS_KEY_PAGOS, JSON.stringify(res.pagos));
+    }
+  } catch(e) { console.warn('Error cargando pagos:', e); }
 }
 
 // Obtener el array de pagos de una factura (prioridad: localStorage > Sheets)
@@ -6041,7 +6433,7 @@ document.getElementById('modal-pago-parcial')?.addEventListener('click', e => {
 // ── Mostrar/ocultar CAE según tipo de comprobante ─────────────────────────────
 function onTipoChange(prefix) {
   const tipo = (document.getElementById(prefix === 'm' ? 'm-tipo' : 'vw-tipo')?.value || '');
-  const sinCae = /^Ticket |^Documento Genérico/i.test(tipo);
+  const sinCae = /^Ticket |^Documento Genérico|^Cupón de Póliza/i.test(tipo);
 
   if (prefix === 'm') {
     // Formulario manual: ocultar/mostrar filas de CAE
@@ -6116,25 +6508,50 @@ function calcularDesdeTotal() {
 }
 
 
-// ── Config de pago en localStorage ───────────────────────────────────────────
-function loadConfigsPago() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY_CONFIG)||'{}'); } catch { return {}; }
+// ── Config de pago — localStorage + Sheets ───────────────────────────────────
+let _configPagoCache = null;
+
+function _getConfigsAll() {
+  if (_configPagoCache) return _configPagoCache;
+  try { _configPagoCache = JSON.parse(localStorage.getItem(LS_KEY_CONFIG)||'{}'); }
+  catch { _configPagoCache = {}; }
+  return _configPagoCache;
 }
-function saveConfigsPago(data) {
+
+function _saveConfigsAll(data) {
+  _configPagoCache = data;
   localStorage.setItem(LS_KEY_CONFIG, JSON.stringify(data));
+  if (SCRIPT_URL) {
+    apiCall('saveConfigPagos', { configs: data }).catch(e => console.warn('Error sync configs:', e));
+  }
 }
+
+function loadConfigsPago() { return _getConfigsAll(); }
+function saveConfigsPago(data) { _saveConfigsAll(data); }
+
 function getConfigPago(facturaId) {
-  return loadConfigsPago()[String(facturaId)] || null;
+  return _getConfigsAll()[String(facturaId)] || null;
 }
 function setConfigPago(facturaId, cfg) {
-  const all = loadConfigsPago();
+  const all = _getConfigsAll();
   all[String(facturaId)] = cfg;
-  saveConfigsPago(all);
+  _saveConfigsAll(all);
 }
 function borrarConfigPago(facturaId) {
-  const all = loadConfigsPago();
+  const all = _getConfigsAll();
   delete all[String(facturaId)];
-  saveConfigsPago(all);
+  _saveConfigsAll(all);
+}
+
+async function loadConfigPagosFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await apiCall('getConfigPagos', {});
+    if (res?.configs && Object.keys(res.configs).length) {
+      _configPagoCache = res.configs;
+      localStorage.setItem(LS_KEY_CONFIG, JSON.stringify(res.configs));
+    }
+  } catch(e) { console.warn('Error cargando configs pago:', e); }
 }
 
 // Generar texto resumen de una configuración
@@ -6554,10 +6971,8 @@ async function _buildPdfHtmlConfig(ids, modo) {
       '<td class="mono">' + (inv.numero_factura||'—') + '</td>' +
       '<td class="mono">' + (inv.cuit||'—') + '</td>' +
       '<td>' + (inv.proveedor||'—') + '</td>' +
-      '<td>' + (inv.condicion_iva||'—') + '</td>' +
-      '<td>' + (fmtDate(inv.fecha_emision)||'—') + '</td>' +
-      '<td class="num">' + fmtAR(total) + '</td>' +
-      (mixto ? '<td class="num" style="color:#84cc16">' + fmtAR(cfg.canje_monto||0) + '</td>' : '<td class="num">—</td>') +
+      '<td>' + (inv.fecha_emision ? fmtDate(inv.fecha_emision) : '—') + '</td>' +
+      (mixto ? '<td class="num" style="color:#84cc16">' + fmtAR(cfg.canje_monto||0) + '</td>' : '') +
       '<td class="num" style="font-weight:800;color:#0a2030">' + fmtAR(monto) + '</td>' +
       '<td class="mono small">' + (dp.cbu||'—') + '</td>' +
     '</tr>';
@@ -6585,11 +7000,12 @@ async function _buildPdfHtmlConfig(ids, modo) {
     '.header-info p{font-size:11px;color:#4a5568;margin-top:2px}' +
     '.total-box{background:#0a2030;color:#fff;border-radius:10px;padding:14px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}' +
     '.total-box .lbl{font-size:12px;opacity:.8}.total-box .val{font-size:22px;font-weight:800;color:#2196a6}.total-box .sub{font-size:11px;opacity:.7;margin-top:2px}' +
-    'table{width:100%;border-collapse:collapse;margin-bottom:16px}' +
-    'th{background:#0a2030;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.3px}' +
-    'td{padding:5px 8px;border-bottom:1px solid #e2e8f0;vertical-align:middle}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed}' +
+    'th{background:#0a2030;color:#fff;padding:5px 6px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.3px;word-wrap:break-word}' +
+    'td{padding:4px 6px;border-bottom:1px solid #e2e8f0;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;font-size:9px}' +
     'tr.even td{background:#f8fafc}tr.odd td{background:#fff}' +
-    '.num{text-align:right;font-family:monospace;font-weight:600}.mono{font-family:monospace;font-size:10px}.small{font-size:9px}' +
+    '.num{text-align:right;font-family:monospace;font-weight:600}.mono{font-family:monospace;font-size:8px}.small{font-size:8px}' +
+    '.col-id{width:3%}.col-tipo{width:7%}.col-nro{width:11%}.col-cuit{width:9%}.col-prov{width:14%}.col-iva{width:9%}.col-fecha{width:8%}.col-total{width:9%}.col-canje{width:8%}.col-transf{width:9%}.col-cbu{width:13%}' +
     '.section-title{font-size:12px;font-weight:700;color:#0a2030;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid #2196a6}' +
     '.footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#718096}' +
     '.firma-box{border:1px solid #cbd5e0;border-radius:6px;padding:8px 16px;text-align:center;min-width:160px}' +
@@ -6607,14 +7023,22 @@ async function _buildPdfHtmlConfig(ids, modo) {
     '<div class="sub">' + factsConModo.length + ' comprobante(s) — ' + Object.keys(byProv).length + ' proveedor(es)</div>' +
     '</div><div style="text-align:right;opacity:.6;font-size:30px">💳</div></div>' +
     '<div class="section-title">📋 Detalle de Comprobantes</div>' +
-    '<table><thead><tr>' +
+    '<table>' +
+    '<colgroup>' +
+    '<col style="width:4%"><col style="width:8%"><col style="width:12%">' +
+    '<col style="width:9%"><col style="width:18%">' +
+    '<col style="width:8%">' +
+    (hayMixto ? '<col style="width:9%">' : '') +
+    '<col style="width:10%"><col style="width:22%">' +
+    '</colgroup>' +
+    '<thead><tr>' +
     '<th>ID</th><th>Tipo</th><th>Nro. Factura</th><th>CUIT</th>' +
-    '<th>Proveedor</th><th>Cond. IVA</th><th>F. Emisión</th>' +
-    '<th style="text-align:right">Total fact.</th>' +
-    (hayMixto ? '<th style="text-align:right;color:#84cc16">Canje</th>' : '') +
-    '<th style="text-align:right">A transferir</th><th>CBU</th>' +
+    '<th>Proveedor</th><th style="text-align:right">F. Emisión</th>' +
+    (hayMixto ? '<th style="text-align:right">Canje</th>' : '') +
+    '<th style="text-align:right">Total a pagar</th><th>CBU</th>' +
     '</tr></thead><tbody>' + filas + '</tbody>' +
-    '<tfoot><tr><td colspan="' + (hayMixto?9:8) + '" style="font-weight:700;padding:6px 8px;background:#f1f5f9">TOTAL A TRANSFERIR</td>' +
+    '<tfoot><tr><td colspan="' + (hayMixto?6:5) + '" style="font-weight:700;padding:6px 8px;background:#f1f5f9">TOTAL A TRANSFERIR</td>' +
+    (hayMixto ? '<td style="background:#f1f5f9"></td>' : '') +
     '<td class="num" style="font-weight:800;background:#f1f5f9">' + fmtAR(totalGen) + '</td>' +
     '<td style="background:#f1f5f9"></td></tr></tfoot></table>' +
     '<div class="section-title">🏢 Resumen por Proveedor</div>' +
@@ -6748,9 +7172,14 @@ async function aprobarPago(id) {
                'Configuración: ' + resumen + '\n\n' +
                'Esto procesará el pago y moverá la factura a Pagadas.')) return;
 
-  // Pedir nombre del aprobador (preparado para cuando haya roles)
-  const aprobador = prompt('Ingresá tu nombre para registrar la aprobación:', '') || 'Sin especificar';
-  if (aprobador === null) return; // canceló
+  // Aprobador desde la sesión activa (no se pide manualmente)
+  const _sesion = getSesion();
+  const aprobador = _sesion?.nombre || _sesion?.usuario || 'Sin especificar';
+  
+  // Verificar que el usuario tiene rol de aprobador
+  if (!puedo('aprobar_pago')) {
+    toast('No tenés permiso para aprobar pagos', 'error'); return;
+  }
 
   const saldo = saldoPendiente(inv);
   const pagos = getPagos(inv);
@@ -6846,8 +7275,8 @@ async function aprobarSeleccionadas() {
     toast('Seleccioná facturas en estado "Pend. Aprobación"', 'warn'); return;
   }
 
-  const aprobador = prompt('Ingresá tu nombre para registrar la aprobación de ' + ids.length + ' factura(s):', '');
-  if (!aprobador) return;
+  const _sesSel = getSesion();
+  const aprobador = _sesSel?.nombre || _sesSel?.usuario || 'Sin especificar';
 
   let procesadas = 0;
   for (const id of ids) {
@@ -6909,39 +7338,55 @@ function detectarConcepto(texto) {
   if (!texto) return '';
   const lineas = texto.split(/\n/).map(l => l.trim()).filter(Boolean);
 
-  // Patrones explícitos en el documento
+  // Patrón 1: encabezados explícitos
   const patrones = [
-    /^CONCEPTO[:\s]+(.+)/i,
-    /^DESCRIPCI[ÓO]N[:\s]+(.+)/i,
-    /^DETALLE[:\s]+(.+)/i,
-    /^SERVICIO[:\s]+(.+)/i,
-    /^POR[:\s]+(.+)/i,
-    /^HONORARIOS[:\s]*(.*)/i,
+    /^CONCEPTO[:\s]+(.+)/i, /^DESCRIPCI[ÓO]N[:\s]+(.+)/i,
+    /^DETALLE[:\s]+(.+)/i,  /^SERVICIO[:\s]+(.+)/i,
+    /^POR[:\s]+(.+)/i,      /^HONORARIOS[:\s]*(.*)/i,
     /^(?:PAUTA|PUBLICIDAD|AVISOS?)[\s:]+(.+)/i,
     /^(?:LOCACI[ÓO]N|ALQUILER)[\s:]+(.+)/i,
   ];
-
   for (const linea of lineas) {
     for (const pat of patrones) {
       const m = linea.match(pat);
-      if (m && m[1] && m[1].trim().length > 2) {
-        return m[1].trim().slice(0, 120);
-      }
+      if (m && m[1] && m[1].trim().length > 2) return m[1].trim().slice(0, 120);
     }
   }
 
-  // Patrón detalle ARCA: "1 Servicios prestados Aconcagua Radio 1,00 otras 1200000,00"
-  const detalleM = texto.match(
-    /^\d+\s+([A-Za-záéíóúñÁÉÍÓÚÑ][A-Za-záéíóúñÁÉÍÓÚÑ\s,\.]{4,80?})\s+[\d]+[,\.][\d]{2}\s+(?:otras|unidades|u\.)/im
+  // Patrón 2: tabla ARCA con encabezado — captura descripción multilínea
+  const tablaM = texto.match(
+    /C[oó]digo\s+Producto\s*\/\s*Servicio[^\n]*\n\s*\d+\s+([\s\S]+?)\s+\d+[,\.]\d{2}\s+unidades/i
   );
-  if (detalleM) return detalleM[1].trim().slice(0, 120);
+  if (tablaM) {
+    const desc = tablaM[1].replace(/\s+/g, ' ').trim();
+    if (desc.length > 3) return desc.slice(0, 150);
+  }
 
-  // Patrón detalle simple: "1 Descripción 1200000,00"
-  const detalleM2 = texto.match(/^\d+\s+([A-Za-záéíóúñÁÉÍÓÚÑ][A-Za-záéíóúñÁÉÍÓÚÑ\s,\.]{4,60})\s+[\d\.]+,[\d]{2}/im);
-  if (detalleM2) return detalleM2[1].trim().slice(0, 120);
+  // Patrón 2b: tabla Medio/Detalle Medios Andinos
+  const medioM = texto.match(/(?:FM|AM|TV|RADIO)\s+[\d\.]+\s+\w+\n([^\n]{10,120}(?:\n[^\n]{5,80})?)/i);
+  if (medioM) {
+    return medioM[1].replace(/\n/g,' ').trim().slice(0,150);
+  }
 
-  // Fallback: buscar línea descriptiva excluyendo líneas técnicas
-  const excluirLinea = /^\d|CUIT|CUIL|FACTURA|FECHA|TOTAL|IVA|CAE|VENCI|VENCE|RUB|ORIGINAL|DUPLICADO|TRIPLICADO|CONDICI|DOMICI|INGRES|PAG\.|Punto\s+de\s+Venta|Comp\.?\s*Nro|Raz[oó]n\s+Social|Per[ií]odo|Direcci[oó]n|Apellido|Importe|Subtotal|Avenida|Calle|Barrio|Ingresos/i;
+  // Patrón 3: ítem multilínea — unir líneas hasta encontrar precio
+  const itemMatch = texto.match(/^(\d+)\s+([A-Za-záéíóúñÁÉÍÓÚÑ].{3,})/m);
+  if (itemMatch) {
+    const fromItem = texto.slice(texto.indexOf(itemMatch[0]));
+    const firstLine = itemMatch[2].trim();
+    const partes = [firstLine];
+    const restoLineas = fromItem.slice(itemMatch[0].length).split('\n');
+    for (const l of restoLineas.slice(0, 4)) {
+      const lt = l.trim();
+      if (!lt || /^[\d]+[,\.][\d]{2}/.test(lt) || /^unidades|^otras/.test(lt)) break;
+      if (/^[A-Za-záéíóúñÁÉÍÓÚÑ\-]/.test(lt) && lt.length < 80) partes.push(lt);
+      else break;
+    }
+    const desc = partes.join(' ').trim();
+    if (desc.length > 4) return desc.slice(0, 150);
+  }
+
+  // Fallback: primera línea descriptiva excluyendo líneas técnicas
+  const excluirLinea = /^\d|CUIT|CUIL|FACTURA|FECHA|TOTAL|IVA|CAE|VENCI|VENCE|ORIGINAL|DUPLICADO|TRIPLICADO|CONDICI|DOMICI|INGRES|PAG\.|Punto\s+de\s+Venta|Comp\.?\s*Nro|Raz[oó]n\s+Social|Per[ií]odo|Direcci[oó]n|Apellido|Importe|Subtotal|Avenida|Barrio|C[oó]digo|Producto|ANDINOS|DIARIO|LOS\s+ANDES/i;
   const candidatas = lineas.filter(l =>
     l.length > 10 && l.length < 100 &&
     !excluirLinea.test(l) &&
@@ -6949,7 +7394,6 @@ function detectarConcepto(texto) {
     !/^[\d\$\/\-\.\s,]+$/.test(l) &&
     !/^\d{2}\/\d{2}\/\d{4}/.test(l)
   );
-
   return candidatas[0] || '';
 }
 
@@ -7044,27 +7488,73 @@ async function hashPin(pin) {
   return [...new Uint8Array(buffer)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── CRUD de usuarios ──────────────────────────────────────────────────────────
+// ── CRUD de usuarios — sincronizado con Google Sheets ─────────────────────────
+let _usuariosCache = null; // cache en memoria
+
 function loadUsuarios() {
+  // Prioridad: cache en memoria → localStorage → null
+  if (_usuariosCache) return _usuariosCache;
   try {
     const raw = localStorage.getItem(LS_KEY_USERS);
-    if (!raw) return null; // no inicializado aún
-    return JSON.parse(raw);
-  } catch { return null; }
+    if (raw) {
+      _usuariosCache = JSON.parse(raw);
+      return _usuariosCache;
+    }
+  } catch {}
+  return null;
 }
 
 function saveUsuarios(users) {
+  _usuariosCache = users;
+  // Guardar en localStorage como backup inmediato
   localStorage.setItem(LS_KEY_USERS, JSON.stringify(users));
+  // Sincronizar con Sheets en background (sin bloquear)
+  _syncUsuariosToSheets(users);
+}
+
+async function _syncUsuariosToSheets(users) {
+  if (!SCRIPT_URL) return;
+  try {
+    await apiCall('saveUsers', { users });
+  } catch(e) {
+    console.warn('No se pudo sincronizar usuarios a Sheets:', e);
+  }
+}
+
+async function loadUsuariosFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await apiCall('getUsers', {});
+    if (res?.users?.length) {
+      _usuariosCache = res.users;
+      localStorage.setItem(LS_KEY_USERS, JSON.stringify(res.users));
+      console.log('Usuarios cargados desde Sheets:', res.users.length);
+    }
+  } catch(e) {
+    console.warn('No se pudo cargar usuarios desde Sheets:', e);
+  }
 }
 
 async function initUsuariosDefault() {
-  if (loadUsuarios()) return; // ya inicializados
-  const adminPin = await hashPin('1234');
-  const defaults = [
-    { id:'u1', nombre:'Administrador', usuario:'admin',
-      pin: adminPin, rol:'admin', permisos:[...ROL_PERMISOS.admin], activo:true }
-  ];
-  saveUsuarios(defaults);
+  // 1. Intentar cargar desde Sheets (con timeout de 5s para no bloquear)
+  try {
+    await Promise.race([
+      loadUsuariosFromSheets(),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+    ]);
+  } catch(e) {
+    console.warn('No se pudo cargar usuarios desde Sheets:', e.message);
+  }
+
+  // 2. Si no hay usuarios en ningún lado (ni Sheets ni localStorage), crear admin
+  if (!loadUsuarios()?.length) {
+    const adminPin = await hashPin('1234');
+    const defaults = [
+      { id:'u1', nombre:'Administrador', usuario:'admin',
+        pin: adminPin, rol:'admin', permisos:[...ROL_PERMISOS.admin], activo:true }
+    ];
+    saveUsuarios(defaults);
+  }
 }
 
 // ── SESIÓN ACTIVA ─────────────────────────────────────────────────────────────
@@ -7095,9 +7585,9 @@ function setSesion(user) {
 }
 
 function cerrarSesion() {
+  flushAuditToSheets(); // guardar log pendiente antes de salir
   _sesionActual = null;
   localStorage.removeItem(LS_KEY_SESSION);
-  // NO borrar el remember — solo la sesión activa
   mostrarLogin();
 }
 
@@ -7449,6 +7939,7 @@ async function guardarUsuario() {
       const pinHash = await hashPin(pin);
       users.push({ id:'u'+Date.now(), nombre, usuario, pin:pinHash, rol, permisos, activo });
     }
+    _usuariosCache = null; // invalidar cache
     saveUsuarios(users);
     cerrarModalUsuario();
     renderAdminPanel();
@@ -7463,6 +7954,7 @@ function eliminarUsuario(id) {
   const user  = users.find(u => u.id === id);
   if (!user) return;
   if (!confirm('¿Eliminar al usuario ' + user.nombre + '? Esta acción no se puede deshacer.')) return;
+  _usuariosCache = null;
   saveUsuarios(users.filter(u => u.id !== id));
   renderAdminPanel();
   toast('Usuario ' + user.nombre + ' eliminado', 'info');
@@ -7480,16 +7972,19 @@ document.getElementById('modal-usuario')?.addEventListener('click', e => {
 
 // Función que arranca la app post-login
 async function iniciarApp() {
-  // SCRIPT_URL ya está configurado como constante en el código
+  // Llamado después del login manual — carga todo en paralelo
+  setSyncStatus('yellow', 'Cargando datos…');
 
-  renderTable();
-  updateStats();
+  await Promise.allSettled([
+    loadProveedoresFromSheets(),
+    loadPagosFromSheets(),
+    loadConfigPagosFromSheets(),
+    loadAuditoriaFromSheets(),
+  ]);
 
   if (SCRIPT_URL) {
-    setSyncStatus('yellow', 'Cargando facturas…');
     await loadFromSheets(false);
   } else {
-    // Sin URL configurada: cargar desde caché local si hay
     updateLocalCache();
     updateStats();
     renderTable();
@@ -7499,6 +7994,34 @@ async function iniciarApp() {
 
   _lastSyncTime = Date.now();
   _scheduleNextSync();
+}
+
+
+// ── Debounce para evitar renders múltiples en cadena ─────────────────────────
+let _renderTableTimer = null;
+const renderTableDebounced = () => {
+  if (_renderTableTimer) clearTimeout(_renderTableTimer);
+  _renderTableTimer = setTimeout(renderTable, 50);
+};
+let _renderPagarTimer = null;
+const renderPagarDebounced = () => {
+  if (_renderPagarTimer) clearTimeout(_renderPagarTimer);
+  _renderPagarTimer = setTimeout(renderPagar, 50);
+};
+
+
+// ── Helpers período contable MM/YYYY ─────────────────────────────────────────
+function periodoToInput(val) {
+  // "2026-07" → "07/2026"
+  if (!val) return '';
+  const m = val.match(/^(\d{4})-(\d{2})$/);
+  return m ? m[2] + '/' + m[1] : val;
+}
+function inputToPeriodo(val) {
+  // "07/2026" → "2026-07"
+  if (!val) return '';
+  const m = val.match(/^(\d{2})\/(\d{4})$/);
+  return m ? m[2] + '-' + m[1] : val;
 }
 
 // Sort via event delegation (único listener, sin duplicados)
@@ -7529,25 +8052,60 @@ document.addEventListener('click', e => {
 
 // ── Inicio de la aplicación con sistema de login ────────────────────────────
 (async () => {
-  // Ocultar el splash inmediatamente — el login lo reemplaza
   const splashEl = document.getElementById('splash');
-  if (splashEl) splashEl.style.display = 'none';
-  const appEl = document.getElementById('app');
-  if (appEl) appEl.style.display = '';
+  const appEl    = document.getElementById('app');
 
-  // Inicializar usuarios por defecto si es la primera vez
+  // Mostrar splash mientras carga
+  if (splashEl) splashEl.style.display = '';
+  if (appEl)    appEl.style.display    = 'none';
+
+  setSplashStatus('Inicializando…', 5);
+
+  // Paso 1: Inicializar usuarios (desde Sheets o default)
+  setSplashStatus('Verificando usuarios…', 15);
   await initUsuariosDefault();
 
-  // Verificar remember me
+  // Paso 2: Verificar remember me
+  setSplashStatus('Verificando sesión…', 25);
   const autoLogin = await verificarRemember();
+
   if (!autoLogin) {
+    // Sin sesión — ocultar splash y mostrar login
+    setSplashStatus('Listo', 100);
+    await new Promise(r => setTimeout(r, 300));
+    if (splashEl) { splashEl.classList.add('fade-out'); setTimeout(() => splashEl.classList.add('hidden'), 600); }
+    if (appEl) appEl.style.display = '';
     mostrarLogin();
     return;
   }
 
-  // Sesión restaurada — aplicar permisos y cargar datos
+  // Paso 3: Tiene sesión — cargar todos los datos antes de mostrar la app
+  setSplashStatus('Cargando proveedores…', 35);
+  await loadProveedoresFromSheets().catch(() => {});
+
+  setSplashStatus('Cargando configuraciones…', 50);
+  await Promise.allSettled([
+    loadPagosFromSheets(),
+    loadConfigPagosFromSheets(),
+    loadAuditoriaFromSheets(),
+  ]);
+
+  setSplashStatus('Cargando facturas…', 65);
   aplicarPermisos();
-  await iniciarApp();
+
+  if (SCRIPT_URL) {
+    await loadFromSheets(false);
+  } else {
+    updateLocalCache();
+    updateStats();
+  }
+
+  setSplashStatus('Todo listo', 100);
+  await new Promise(r => setTimeout(r, 400)); // pequeña pausa para que se vea el 100%
+
+  // Mostrar la app y ocultar splash con fade
+  if (appEl) appEl.style.display = '';
+  if (splashEl) { splashEl.classList.add('fade-out'); setTimeout(() => splashEl.classList.add('hidden'), 600); }
 })();
 </script>
 </body>
