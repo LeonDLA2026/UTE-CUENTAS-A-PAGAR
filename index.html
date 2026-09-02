@@ -1557,7 +1557,7 @@ const CUIT_PROPIO = '30719078369';
 const RAZON_SOCIAL_PROPIA = 'DIARIO LOS ANDES HERMANOS CALLE S.A. Y MEDIOS ANDINOS S.A. U.T.E.';
 const LS_KEY_DATA = 'facturas_ocr_local_cache'; // caché local para trabajar offline
 
-let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8AXN3zytTE860mfdI_ZdbQ-pY_FlUsMMidJxsFJlr-R5Zn571vqnb-rYm4XKExkhD/exec';
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeJHkqfyULxra2APCeRKRGYUQDoivipD0E3m-2jfPO1gHguM1Z5l5CPsmgyDd0J1jj/exec';
 localStorage.setItem(LS_KEY_URL, SCRIPT_URL); // guardar también en localStorage
 
 // ═══════════════════════════════════════════════════════
@@ -1625,6 +1625,9 @@ async function uploadFileToDrive(file) {
 
     setSyncStatus('yellow', 'Subiendo archivo a Drive…');
 
+    // AbortController con timeout de 60s para archivos grandes
+    const _ctrl = new AbortController();
+    const _timer = setTimeout(() => _ctrl.abort(), 60000);
     const res = await fetch(SCRIPT_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -1635,16 +1638,18 @@ async function uploadFileToDrive(file) {
         mimeType: mimeType,
       }),
       redirect: 'follow',
-    });
+      signal: _ctrl.signal,
+    }).finally(() => clearTimeout(_timer));
 
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
-    if (!json.success) throw new Error(json.error);
+    console.log('[Drive] Respuesta:', JSON.stringify(json).slice(0, 200));
+    if (!json.success) throw new Error(json.error || 'Error desconocido del servidor');
 
     return json.data; // { fileId, viewUrl, embedUrl, fileName }
   } catch(err) {
-    console.warn('Error subiendo a Drive:', err);
-    toast('Aviso: no se pudo subir el archivo a Drive. Los datos se guardaron igual.', 'warn', 5000);
+    console.error('[Drive] Error completo:', err.message, err);
+    toast('Error al subir a Drive: ' + err.message, 'error', 6000);
     return null;
   }
 }
