@@ -6725,9 +6725,23 @@ function abrirModalConfig(id) {
     if (cfg.canje_monto)    document.getElementById('mcp-canje-monto').value  = cfg.canje_monto;
     actualizarMcpResumen();
   } else {
-    // Por defecto: 100% transferencia total
+    // Por defecto: 100% transferencia total — guardar automáticamente
     setMcpTipo('transferencia');
     setMcpSubtipo('transf', 'total');
+    // Auto-guardar la config por defecto para que aparezca en la tabla sin abrir el modal
+    const _inv = DB.invoices.find(i => i.id === id);
+    const _total = totalEfectivo(_inv) || 0;
+    setConfigPago(id, {
+      tipo: 'transferencia',
+      transf_subtipo: 'total',
+      transf_monto: _total,
+      canje_subtipo: null,
+      canje_monto: null,
+      obs: '',
+      fecha_venc_cheque: '',
+      fecha_config: new Date().toISOString(),
+    });
+    // No cambiar estado automáticamente — el operador decide cuándo enviar a aprobación
   }
 
   document.getElementById('modal-config-pago').style.display = 'flex';
