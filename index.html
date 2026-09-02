@@ -75,14 +75,13 @@ code{background:var(--surface2);padding:1px 6px;border-radius:4px;font-size:11px
 /* ── STATS ── */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:16px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:10px 12px;display:flex;flex-direction:column;gap:3px;
-  border-left:3px solid var(--border);min-width:0;overflow:hidden}
+  padding:10px 14px;display:flex;flex-direction:column;gap:3px;
+  border-left:3px solid var(--border);min-width:120px;flex:1}
 .stat.blue{border-left-color:var(--accent)}.stat.green{border-left-color:var(--green)}
 .stat.yellow{border-left-color:var(--yellow)}.stat.red{border-left-color:var(--red)}
-.stat-val{font-size:clamp(13px,1.8vw,22px);font-weight:800;line-height:1.2;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stat-lbl{font-size:10px;color:var(--muted);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-val{font-size:clamp(12px,1.5vw,20px);font-weight:800;line-height:1.2;
+  white-space:nowrap}
+.stat-lbl{font-size:10px;color:var(--muted);white-space:nowrap}
 .stat.blue .stat-val{color:var(--accent)}.stat.green .stat-val{color:var(--green)}
 .stat.yellow .stat-val{color:var(--yellow)}.stat.red .stat-val{color:var(--red)}
 /* ── UPLOAD ── */
@@ -214,14 +213,24 @@ tbody tr:last-child td{border-bottom:none}
 /* ── PAGAR / PAGADAS ── */
 .pagar-table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r);margin-bottom:10px}
-.pagar-summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.pagar-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:12px 18px;display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--accent)}
+.pagar-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:stretch}
+.pagar-stat{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 20px;display:flex;flex-direction:column;gap:4px;
+  border-left:3px solid var(--accent);
+  flex:1;min-width:180px;
+  transition:border-color .2s,box-shadow .2s;overflow:visible}
+.pagar-stat:hover{box-shadow:0 2px 12px rgba(33,150,166,.15)}
 .pagar-stat.green{border-left-color:var(--green)}
-.pagar-stat-val{font-size:clamp(13px,1.8vw,22px);font-weight:800;color:var(--accent);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pagar-stat.orange{border-left-color:#f97316}
+.pagar-stat-val{
+  font-size:clamp(12px,1.5vw,22px);font-weight:800;color:var(--accent);
+  white-space:nowrap;letter-spacing:-.5px;
+  overflow:visible}
 .pagar-stat.green .pagar-stat-val{color:var(--green)}
-.pagar-stat-lbl{font-size:11px;color:var(--muted)}
+.pagar-stat.orange .pagar-stat-val{color:#f97316}
+.pagar-stat-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.pagar-stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
 .cb-pagar{width:18px;height:18px;cursor:pointer;accent-color:var(--green)}
 .row-pagada td{opacity:.6;text-decoration:none}
 .row-pagada .mono{opacity:.6}
@@ -979,6 +988,32 @@ tbody tr:last-child td{border-bottom:none}
       <h2 style="font-size:16px;font-weight:700">⚙ Administración del Sistema</h2>
       <button class="btn btn-primary btn-sm" onclick="abrirModalNuevoUsuario()">+ Nuevo usuario</button>
     </div>
+    <!-- Importar Excel -->
+    <div class="admin-section" style="margin-bottom:16px">
+      <div class="admin-section-head">
+        <h3>📥 Importar datos desde Excel</h3>
+        <span style="font-size:12px;color:var(--muted)">Actualiza campos de facturas existentes</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">
+          Descargá el Excel desde <strong>⬇ Excel</strong>, completá las columnas que faltan 
+          (<strong>Período Contable</strong>, <strong>Categoría</strong>, <strong>Centro de Costo</strong>, <strong>Concepto/Servicio</strong>) 
+          y subilo acá. Solo se actualizan las filas que cambiaron — el ID es la clave.
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;
+            background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
+            📂 Seleccionar Excel
+            <input type="file" id="admin-import-excel" accept=".xlsx,.xls" style="display:none"
+              onchange="importarDesdeExcel(this)"/>
+          </label>
+          <span id="admin-import-status" style="font-size:13px;color:var(--muted)"></span>
+        </div>
+        <div id="admin-import-preview" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Usuarios -->
     <div class="admin-section">
       <div class="admin-section-head">
         <h3>👥 Usuarios</h3>
@@ -2206,10 +2241,16 @@ async function processAllOCR() {
             // Agrupar por Y — tolerancia de 3px para considerar mismo renglón
             const _lm = new Map();
             for (const item of _ct.items) {
-              if (!item.str) continue;
+              // Forzar string — PDF.js puede devolver Date u otros tipos
+              const _str = item.str == null ? ''
+                : typeof item.str === 'string' ? item.str
+                : item.str instanceof Date
+                  ? ('0'+item.str.getDate()).slice(-2)+'/'+('0'+(item.str.getMonth()+1)).slice(-2)+'/'+item.str.getFullYear()
+                : String(item.str);
+              if (!_str.trim()) continue;
               const y = Math.round(item.transform[5] / 3) * 3;
               if (!_lm.has(y)) _lm.set(y, []);
-              _lm.get(y).push({ x: item.transform[4], str: item.str });
+              _lm.get(y).push({ x: item.transform[4], str: _str });
             }
             // Ordenar de arriba hacia abajo (Y mayor = más arriba en PDF coords)
             const _ys   = [..._lm.keys()].sort((a, b) => b - a);
@@ -2602,9 +2643,14 @@ function extractFields(txt) {
   };
 
   // Determinar dónde empieza el bloque receptor
-  // Buscar: línea de guiones, "Avisador:", o "Cond. IVA:" del receptor
+  // Prioridad 1: línea de guiones o "Avisador:"
+  // Prioridad 2: primera aparición del CUIT propio (receptor)
   const _recvPos = t.search(/(?:_{10,}|Avisador\s*:|^Cond\.\s*IVA:\s*$)/im);
-  const _cabecera = _recvPos > 0 ? t.slice(0, _recvPos) : t.slice(0, 400);
+  const _cuitPropioPosIdx = t.indexOf(CUIT_PROPIO);
+  const _sepPos = _recvPos > 0
+    ? (_cuitPropioPosIdx > 0 ? Math.min(_recvPos, _cuitPropioPosIdx) : _recvPos)
+    : (_cuitPropioPosIdx > 0 ? _cuitPropioPosIdx : -1);
+  const _cabecera = _sepPos > 0 ? t.slice(0, _sepPos) : t.slice(0, 400);
 
   // Paso 1: buscar CUIT en la cabecera — varios formatos:
   // "CUIT: 30719078369" / "C.U.I.T.: 30-71105773-7" / "CUIT:\n30719078369"
@@ -2645,7 +2691,7 @@ function extractFields(txt) {
   // Número factura
   let punto_venta=null,numero=null,numero_factura=null;
   // Patrón 1: "Punto de Venta: XXXXX Comp. Nro: ZZZZZZZZ"
-  const pvM=t.match(/Punto\s+de\s+Venta\s*:\s*(\d{1,5})\s+Comp\.?\s+Nro\s*:\s*(\d{1,8})/i);
+  const pvM=t.match(/Punto\s+de\s+Venta\s*:\s*(\d{1,5})\s+Comp\.?\s*Nro\s*:\s*(\d{1,8})/i);
   if(pvM){punto_venta=pvM[1].padStart(5,'0');numero=pvM[2].padStart(8,'0');}
   // Patrón 1b: "Compr.N°: 1001 - 00004362" (formato TRAMAT/otros)
   if(!punto_venta){
@@ -2660,6 +2706,18 @@ function extractFields(txt) {
     const nmL=t.match(/\b(\d{3,5})[A-Z](\d{6,8})\b/);
     if(nmL){punto_venta=nmL[1].padStart(5,'0');numero=nmL[2].padStart(8,'0');}
   }
+  // Patrón 4: PV y Nro en líneas separadas
+  // "Punto de Venta:   Comp. Nro:\n00001   00000004"
+  if(!punto_venta){
+    const pvNroM=t.match(/Punto\s+de\s+Venta\s*:\s*Comp\.?\s*Nro\s*:\s*[\n\r]+\s*(\d{1,5})\s+(\d{1,8})/i);
+    if(pvNroM){punto_venta=pvNroM[1].padStart(5,'0');numero=pvNroM[2].padStart(8,'0');}
+  }
+  // Patrón 5: PV y Nro separados buscando cada uno individualmente
+  if(!punto_venta){
+    const pvSolo=t.match(/Punto\s+de\s+Venta\s*[:\s]+0*(\d{1,5})/i);
+    const nroSolo=t.match(/Comp\.?\s*Nro\s*[:\s]+0*(\d{1,8})/i);
+    if(pvSolo&&nroSolo){punto_venta=pvSolo[1].padStart(5,'0');numero=nroSolo[1].padStart(8,'0');}
+  }
   const tLetra={
     'Factura A':'A','Factura C':'C','Factura E':'E',
     'Nota de Crédito A':'A','Nota de Crédito C':'C','Nota de Crédito B':'B',
@@ -2671,10 +2729,8 @@ function extractFields(txt) {
   // Proveedor — nombre del EMISOR (quien factura)
   let proveedor=null;
 
-  // Paso 1: "Razón Social:" explícito — en la cabecera del emisor
-  // Buscar dentro de la cabecera para no tomar la razón social del receptor
-  const _cabeceraRs = _recvPos > 0 ? t.slice(0, _recvPos) : t.slice(0, 500);
-  const rsM = _cabeceraRs.match(/Raz[oó]n\s+Social:\s*([^\n\r]{3,100}?)(?:\s{3,}|C\.U\.I\.T\.|$)/i);
+  // Paso 1: "Razón Social:" en la cabecera del emisor (usa _cabecera ya calculada)
+  const rsM = _cabecera.match(/Raz[oó]n\s+Social:\s*([^\n\r]{3,100}?)(?:\s{3,}|C\.U\.I\.T\.|Fecha|$)/i);
   if(rsM) proveedor = rsM[1].trim();
 
   // Paso 2: buscar en la cabecera del emisor (antes del bloque receptor)
@@ -2845,8 +2901,10 @@ function extractFields(txt) {
 
   // CAE
   let cae=null;
-  const caeM=t.match(/CAE\s*N[°oº]?\s*:?\s*([\d\s]{14,17})/i)||t.match(/\bCAE\b\s*:?\s*([\d]{14})/i);
-  if(caeM){ cae = caeM[1].replace(/\s/g,'').slice(0,14); }
+  // CAE: 14 dígitos — Tesseract a veces lee 13; tomar lo que haya (13-14)
+  const caeM = t.match(/CAE\s*N[°oº]?\s*:?\s*([\d\s]{13,17})/i)
+    || t.match(/\bCAE\b\s*:?\s*([\d\s]{13,17})/i);
+  if(caeM) { cae = caeM[1].replace(/\s/g,'').slice(0,14); }
   if(caeM){cae=caeM[1];}else{const c14=t.match(/\b(\d{14})\b/);if(c14)cae=c14[1];}
 
   // VTO CAE
@@ -2938,7 +2996,7 @@ function updateStats() {
   document.getElementById('s-rev').textContent   = inv.filter(i=>i.estado_rev==='REVISADA').length;
   document.getElementById('s-pend').textContent  = inv.filter(i=>i.estado_rev==='PENDIENTE'||i.estado_rev==='OBSERVADA').length;
   document.getElementById('s-err').textContent   = inv.filter(i=>i.estado_ocr==='ERROR').length;
-  document.getElementById('s-imp').textContent   = fmtMoney(
+  document.getElementById('s-imp').textContent   = fmtMoneyShort(
     inv.filter(i=>i.estado_rev!=='PAGADA').reduce((a,i)=>a+(totalEfectivo(i)||0),0)
   );
 
@@ -2961,11 +3019,11 @@ function updateStats() {
   const elMesAct = document.getElementById('s-mes');
   const elMesAnt = document.getElementById('s-mesant');
   if(elMesAct){
-    elMesAct.textContent = fmtMoney(totalMesAct);
+    elMesAct.textContent = fmtMoneyShort(totalMesAct);
     document.getElementById('s-mes-lbl').textContent = `${meses[mesAct]} ${anoAct} (${countMesAct} fact.)`;
   }
   if(elMesAnt){
-    elMesAnt.textContent = fmtMoney(totalMesAnt);
+    elMesAnt.textContent = fmtMoneyShort(totalMesAnt);
     document.getElementById('s-mesant-lbl').textContent = `${meses[mesAnt]} ${mesAnt<mesAct?anoAct:anoAnt} (${countMesAnt} fact.)`;
   }
 }
@@ -3666,7 +3724,13 @@ document.getElementById('btn-vw-reocr')?.addEventListener('click', async () => {
         // Agrupar items por posición Y (mismo renglón = misma línea)
         const lineMap = new Map();
         for (const item of content.items) {
-          if (!item.str.trim()) continue;
+              // Forzar string — PDF.js puede devolver Date u otros tipos
+              const _str = item.str == null ? ''
+                : typeof item.str === 'string' ? item.str
+                : item.str instanceof Date
+                  ? ('0'+item.str.getDate()).slice(-2)+'/'+('0'+(item.str.getMonth()+1)).slice(-2)+'/'+item.str.getFullYear()
+                : String(item.str);
+              if (!_str.trim()) continue;
           const y = Math.round(item.transform[5]);
           if (!lineMap.has(y)) lineMap.set(y, []);
           lineMap.get(y).push({ x: item.transform[4], str: item.str });
@@ -3772,7 +3836,9 @@ async function saveExcel(soloFiltrado=false){
     'CUIT','Proveedor','Condición IVA','Fecha Emisión',
     'Neto Gravado','IVA 21%','IVA 10.5%','IVA 27%',
     'Otros Impuestos','Percepciones','Total',
-    'CAE','Vencimiento CAE','Observaciones','Archivo','Fecha Carga','Fecha Pago'];
+    'CAE','Vencimiento CAE',
+    'Concepto/Servicio','Período Contable','Categoría','Centro de Costo',
+    'Observaciones','Archivo','Fecha Carga','Fecha Pago'];
   const rows=inv.map(i=>[
     i.id,i.estado_ocr,i.estado_rev,i.tipo||'',i.numero_factura||'',
     i.cuit||'',i.proveedor||'',i.condicion_iva||'',
@@ -3780,6 +3846,8 @@ async function saveExcel(soloFiltrado=false){
     (netoEfectivo(i)??''),i.iva21||'',i.iva105||'',i.iva27||'',
     i.otros||'',i.percepciones||'',i.total||'',
     i.cae||'',i.vto_cae?new Date(i.vto_cae):'',
+    i.concepto||'',periodoToInput(i.periodo_contable||''),
+    i.categoria||'',i.centro_costo||'',
     i.observaciones||'',i.archivo_nombre||'',
     i.fecha_carga?new Date(i.fecha_carga):'',
     i.fecha_pago?new Date(i.fecha_pago):'',
@@ -3796,8 +3864,9 @@ async function saveExcel(soloFiltrado=false){
   ws['!cols']=[{wch:6},{wch:16},{wch:18},{wch:14},{wch:18},
     {wch:18},{wch:35},{wch:22},{wch:14},
     {wch:14},{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14},
-    {wch:18},{wch:16},{wch:30},{wch:30},{wch:18}];
-  ws['!autofilter']={ref:`A1:U${inv.length+1}`};
+    {wch:18},{wch:16},{wch:40},{wch:12},{wch:22},{wch:22},
+    {wch:30},{wch:30},{wch:18},{wch:18}];
+  ws['!autofilter']={ref:`A1:Z${inv.length+1}`};
   XLSX.utils.book_append_sheet(wb,ws,'Facturas');
   const byProv={};
   inv.forEach(i=>{const k=i.proveedor||'Sin proveedor';
@@ -3866,18 +3935,40 @@ function renderPagar() {
   const totalImporte  = items.reduce((a,i)=>a+(totalEfectivo(i)||0),0);
   const pendAprobacion = items.filter(i=>i.estado_rev==='PEND. APROBACIÓN');
   const totalPendApro  = pendAprobacion.reduce((a,i)=>a+(saldoPendiente(i)||0),0);
+  // Agrupar por mes/período para los cuadritos
+  const _periodos = {};
+  items.forEach(inv => {
+    // Normalizar a YYYY-MM para agrupar correctamente
+    const p = normalizarPeriodo(inv.periodo_contable || '');
+    if (!_periodos[p]) _periodos[p] = { count:0, total:0 };
+    _periodos[p].count++;
+    _periodos[p].total += totalEfectivo(inv)||0;
+  });
+  const _periodosSorted = Object.entries(_periodos)
+    .sort((a,b) => b[0].localeCompare(a[0])).slice(0, 3);
+
+  const _periodoHtml = _periodosSorted.map(([p, v]) => {
+    const label = p ? periodoToInput(p) : 'Sin período';
+    return `<div class="pagar-stat">
+      <div class="pagar-stat-lbl">${label}</div>
+      <div class="pagar-stat-val">${fmtMoneyShort(v.total)}</div>
+      <div class="pagar-stat-sub">${v.count} factura(s)</div>
+    </div>`;
+  }).join('');
+
   document.getElementById('pagar-summary').innerHTML = `
-    <div class="pagar-stat"><div class="pagar-stat-val">${items.length}</div>
-      <div class="pagar-stat-lbl">Facturas por pagar</div></div>
-    <div class="pagar-stat green"><div class="pagar-stat-val" style="font-size:18px">
-      ${fmtMoney(totalImporte)}</div>
-      <div class="pagar-stat-lbl">Total a pagar</div></div>
+    <div class="pagar-stat">
+      <div class="pagar-stat-lbl">Total a pagar</div>
+      <div class="pagar-stat-val">${fmtMoneyShort(totalImporte)}</div>
+      <div class="pagar-stat-sub">${items.length} factura(s)</div>
+    </div>
     ${pendAprobacion.length ? `
-    <div class="pagar-stat" style="border-left-color:#f97316">
-      <div class="pagar-stat-val" style="color:#f97316">${pendAprobacion.length}</div>
+    <div class="pagar-stat orange">
       <div class="pagar-stat-lbl">Pend. aprobación</div>
-      <div style="font-size:11px;color:#f97316;margin-top:2px">${fmtMoney(totalPendApro)}</div>
+      <div class="pagar-stat-val">${pendAprobacion.length}</div>
+      <div class="pagar-stat-sub">${fmtMoneyShort(totalPendApro)}</div>
     </div>` : ''}
+    ${_periodoHtml}
   `;
   // Aviso para aprobador — reusar el mismo div, no acumular
   let avisoEl = document.getElementById('aviso-aprobador');
@@ -7384,10 +7475,23 @@ function detectarConcepto(texto) {
     }
     const desc = partes.join(' ').trim();
     if (desc.length > 4) return desc.slice(0, 150);
+
+  // Patrón 3b: descripción sin número de ítem seguida de cantidad
+  // 'Servicios prestados durante el mes de 1,00 unidades...'
+  const sinNroM = texto.match(/^([A-Za-záéíóúñÁÉÍÓÚÑ][A-Za-záéíóúñÁÉÍÓÚÑ\s,\.]{4,80?})\s+[\d]+[,\.][\d]{2}\s+unidades/im);
+  if (sinNroM) {
+    const _d1 = sinNroM[1].trim();
+    const _idx0 = texto.indexOf(sinNroM[0]);
+    const _sig = texto.slice(_idx0 + sinNroM[0].length).split('\n').find(l => l.trim().length > 2);
+    const _cont = _sig?.trim() || '';
+    const _df = _cont && /^[A-Za-záéíóúñÁÉÍÓÚÑ]/.test(_cont) && !/^\d+[,\.]/.test(_cont)
+      ? _d1 + ' ' + _cont : _d1;
+    if (_df.length > 4) return _df.slice(0, 150);
+  }
   }
 
   // Fallback: primera línea descriptiva excluyendo líneas técnicas
-  const excluirLinea = /^\d|CUIT|CUIL|FACTURA|FECHA|TOTAL|IVA|CAE|VENCI|VENCE|ORIGINAL|DUPLICADO|TRIPLICADO|CONDICI|DOMICI|INGRES|PAG\.|Punto\s+de\s+Venta|Comp\.?\s*Nro|Raz[oó]n\s+Social|Per[ií]odo|Direcci[oó]n|Apellido|Importe|Subtotal|Avenida|Barrio|C[oó]digo|Producto|ANDINOS|DIARIO|LOS\s+ANDES/i;
+  const excluirLinea = /^\d|CUIT|CUIL|FACTURA|FECHA|TOTAL|IVA|CAE|VENCI|VENCE|ORIGINAL|DUPLICADO|TRIPLICADO|CONDICI|DOMICI|INGRES|PAG\.|Punto\s+de\s+Venta|Comp\.?\s*Nro|Raz[oó]n\s+Social|Per[ií]odo|Direcci[oó]n|Apellido|Importe|Subtotal|Avenida|Barrio|C[oó]digo|Producto|ANDINOS|DIARIO|LOS\s+ANDES|S\.A\.\s*U$|HERMANOS\s+CALLE|MEDIOS\s+ANDINOS|ACONCAGUA\s+RADIO/i;
   const candidatas = lineas.filter(l =>
     l.length > 10 && l.length < 100 &&
     !excluirLinea.test(l) &&
@@ -7976,6 +8080,9 @@ async function iniciarApp() {
   // Llamado después del login manual — carga todo en paralelo
   setSyncStatus('yellow', 'Cargando datos…');
 
+  // Normalizar períodos mal guardados (ISO → YYYY-MM)
+  if (SCRIPT_URL) apiCall('normalizarPeriodos', {}).catch(()=>{});
+
   await Promise.allSettled([
     loadProveedoresFromSheets(),
     loadPagosFromSheets(),
@@ -8014,15 +8121,199 @@ const renderPagarDebounced = () => {
 // ── Helpers período contable MM/YYYY ─────────────────────────────────────────
 function periodoToInput(val) {
   // "2026-07" → "07/2026"
+  // "2026-08-01T03:00:00.000Z" → "08/2026"
   if (!val) return '';
+  // Formato ISO completo
+  const mISO = val.match(/^(\d{4})-(\d{2})-\d{2}T/);
+  if (mISO) return mISO[2] + '/' + mISO[1];
+  // Formato YYYY-MM
   const m = val.match(/^(\d{4})-(\d{2})$/);
   return m ? m[2] + '/' + m[1] : val;
 }
+
+function normalizarPeriodo(val) {
+  // Normalizar cualquier formato a "YYYY-MM"
+  if (!val) return '';
+  const mISO = val.match(/^(\d{4})-(\d{2})/);
+  if (mISO) return mISO[1] + '-' + mISO[2];
+  const mSlash = val.match(/^(\d{2})\/(\d{4})$/);
+  if (mSlash) return mSlash[2] + '-' + mSlash[1];
+  return val;
+}
 function inputToPeriodo(val) {
   // "07/2026" → "2026-07"
+  // "2026-08-01T..." → "2026-08"
   if (!val) return '';
+  const mISO = val.match(/^(\d{4})-(\d{2})-\d{2}T/);
+  if (mISO) return mISO[1] + '-' + mISO[2];
   const m = val.match(/^(\d{2})\/(\d{4})$/);
-  return m ? m[2] + '-' + m[1] : val;
+  if (m) return m[2] + '-' + m[1];
+  return val;
+}
+
+
+// Formatear monto compacto para cuadritos (muestra completo pero ajusta fuente)
+function fmtMoneyShort(n) {
+  if (n == null) return '—';
+  if (Math.abs(n) >= 1e9) return '$ ' + (n/1e9).toFixed(1).replace('.',',') + 'B';
+  if (Math.abs(n) >= 1e6) return '$ ' + (n/1e6).toFixed(2).replace('.',',') + 'M';
+  return fmtMoney(n);
+}
+
+
+// ═══════════════════════════════════════════════════════
+// IMPORTAR DATOS DESDE EXCEL (panel Admin)
+// ═══════════════════════════════════════════════════════
+async function importarDesdeExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const statusEl  = document.getElementById('admin-import-status');
+  const previewEl = document.getElementById('admin-import-preview');
+  statusEl.textContent  = '⏳ Leyendo archivo…';
+  previewEl.style.display = 'none';
+
+  try {
+    const ab   = await file.arrayBuffer();
+    const wb   = XLSX.read(ab, { type: 'array', cellDates: true });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const data  = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+    if (!data.length) { statusEl.textContent = '❌ El archivo está vacío'; return; }
+
+    // Mapear columnas del Excel a campos internos
+    // El Excel tiene: ID, Concepto/Servicio, Período Contable, Categoría, Centro de Costo
+    const CAMPOS_IMPORTABLES = {
+      'Concepto/Servicio':  'concepto',
+      'Período Contable':   'periodo_contable',
+      'Categoría':          'categoria',
+      'Centro de Costo':    'centro_costo',
+      'Observaciones':      'observaciones',
+    };
+
+    // Verificar que el Excel tiene columna ID
+    const primeraFila = data[0];
+    if (!('ID' in primeraFila)) {
+      statusEl.textContent = '❌ El Excel no tiene columna ID. Usá el Excel exportado por el sistema.';
+      return;
+    }
+
+    // Procesar filas
+    let actualizados = 0, sinCambios = 0, noEncontrados = 0;
+    const cambios = [];
+
+    for (const row of data) {
+      const id = parseInt(row['ID']);
+      if (!id || isNaN(id)) continue;
+
+      const inv = DB.invoices.find(i => i.id === id);
+      if (!inv) { noEncontrados++; continue; }
+
+      const updates = {};
+      let hayCambios = false;
+
+      for (const [colExcel, campo] of Object.entries(CAMPOS_IMPORTABLES)) {
+        const valExcel = String(row[colExcel] || '').trim();
+        if (!valExcel) continue; // no sobreescribir con vacío
+
+        // Normalizar período contable
+        let valFinal = valExcel;
+        if (campo === 'periodo_contable') {
+          valFinal = inputToPeriodo(valExcel) || valExcel;
+        }
+
+        if (valFinal !== (inv[campo] || '')) {
+          updates[campo] = valFinal;
+          hayCambios = true;
+        }
+      }
+
+      if (hayCambios) {
+        cambios.push({ id, inv, updates });
+        actualizados++;
+      } else {
+        sinCambios++;
+      }
+    }
+
+    // Mostrar preview antes de aplicar
+    if (cambios.length === 0) {
+      statusEl.textContent = `✅ Sin cambios — ${sinCambios} filas ya están actualizadas.`;
+      return;
+    }
+
+    // Preview de los cambios
+    const previewHtml = `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:8px">
+        <div style="font-weight:700;margin-bottom:10px">
+          📋 ${cambios.length} factura(s) con cambios — ${sinCambios} sin cambios
+          ${noEncontrados ? `<span style="color:var(--red);font-size:12px;margin-left:8px">${noEncontrados} ID(s) no encontrados</span>` : ''}
+        </div>
+        <div style="max-height:200px;overflow-y:auto;font-size:12px">
+          ${cambios.slice(0,20).map(({id, inv, updates}) =>
+            `<div style="padding:4px 0;border-bottom:1px solid rgba(30,74,99,.3)">
+              <strong>#${id}</strong> ${inv.proveedor||''} — 
+              ${Object.entries(updates).map(([k,v]) => `<span style="color:var(--accent)">${k}: ${v}</span>`).join(', ')}
+            </div>`
+          ).join('')}
+          ${cambios.length > 20 ? `<div style="color:var(--muted);padding:4px 0">…y ${cambios.length-20} más</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary btn-sm" onclick="aplicarImportacion(window._importCambios)">
+            ✅ Aplicar ${cambios.length} cambio(s)
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="this.closest('[id]').style.display='none';document.getElementById('admin-import-status').textContent=''">
+            Cancelar
+          </button>
+        </div>
+      </div>`;
+
+    previewEl.innerHTML = previewHtml;
+    previewEl.style.display = 'block';
+    statusEl.textContent = `📋 Revisá los cambios antes de aplicar`;
+    window._importCambios = cambios;
+
+  } catch(e) {
+    statusEl.textContent = '❌ Error al leer el archivo: ' + e.message;
+    console.error('Import error:', e);
+  }
+
+  // Limpiar el input para poder reimportar
+  input.value = '';
+}
+
+async function aplicarImportacion(cambios) {
+  if (!cambios?.length) return;
+  const statusEl  = document.getElementById('admin-import-status');
+  const previewEl = document.getElementById('admin-import-preview');
+  statusEl.textContent = '⏳ Aplicando cambios…';
+  previewEl.style.display = 'none';
+
+  let ok = 0;
+  for (const { id, inv, updates } of cambios) {
+    Object.assign(inv, updates);
+    // Registrar en historial
+    if (!inv.historial) inv.historial = [];
+    inv.historial.push({
+      fecha:   new Date().toISOString(),
+      usuario: getSesion()?.nombre || 'Admin',
+      accion:  'Importación Excel',
+      detalle: Object.entries(updates).map(([k,v])=>`${k}: ${v}`).join(', '),
+    });
+    ok++;
+  }
+
+  // Guardar todo en batch
+  updateLocalCache();
+  await batchSaveInvoices(DB.invoices.filter(i => cambios.some(c => c.id === i.id)));
+  
+  statusEl.textContent = `✅ ${ok} factura(s) actualizadas correctamente`;
+  window._importCambios = null;
+
+  // Re-renderizar tabla actual
+  renderTable();
+  renderPagar();
+  toast(`✅ Importación completada — ${ok} factura(s) actualizadas`, 'success', 5000);
 }
 
 // Sort via event delegation (único listener, sin duplicados)
