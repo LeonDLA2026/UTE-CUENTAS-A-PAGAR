@@ -1921,6 +1921,9 @@ async function _smartSync() {
     _lastSyncTime    = Date.now();
 
     // Notificar al usuario si hay facturas nuevas de otro operador
+    // Aplicar config por defecto a facturas revisadas nuevas
+    _aplicarConfigDefecto();
+
     if (newCount > prevCount) {
       const nuevas = DB.invoices.filter(i => !prevIds.has(i.id));
       const sesion = getSesion();
@@ -7516,7 +7519,8 @@ function detectarConcepto(texto) {
     !excluirLinea.test(l) &&
     l.split(' ').length >= 2 &&
     !/^[\d\$\/\-\.\s,]+$/.test(l) &&
-    !/^\d{2}\/\d{2}\/\d{4}/.test(l)
+    !/^\d{2}\/\d{2}\/\d{4}/.test(l) &&
+    !/^\d{4}-\d{2}-\d{2}T/.test(l)   // excluir fechas ISO
   );
   return candidatas[0] || '';
 }
@@ -8102,6 +8106,9 @@ async function iniciarApp() {
   // Normalizar períodos mal guardados (ISO → YYYY-MM)
   if (SCRIPT_URL) apiCall('normalizarPeriodos', {}).catch(()=>{});
 
+  // Aplicar config de pago por defecto a facturas REVISADAS sin config
+  _aplicarConfigDefecto();
+
   await Promise.allSettled([
     loadProveedoresFromSheets(),
     loadPagosFromSheets(),
@@ -8333,6 +8340,37 @@ async function aplicarImportacion(cambios) {
   renderTable();
   renderPagar();
   toast(`✅ Importación completada — ${ok} factura(s) actualizadas`, 'success', 5000);
+}
+
+
+// ── Aplicar config de pago por defecto a facturas REVISADAS sin config ────────
+function _aplicarConfigDefecto() {
+  const revisadas = DB.invoices.filter(i =>
+    (i.estado_rev === 'REVISADA' || i.estado_rev === 'Revisada') && !getConfigPago(i.id)
+  );
+  if (!revisadas.length) return;
+
+  revisadas.forEach(inv => {
+    setConfigPago(inv.id, {
+      tipo:           'transferencia',
+      transf_subtipo: 'total',
+      transf_monto:   totalEfectivo(inv) || 0,
+      canje_subtipo:  null,
+      canje_monto:    null,
+      obs:            '',
+      fecha_venc_cheque: '',
+      fecha_config:   new Date().toISOString(),
+    });
+    // Pasar a PEND. APROBACIÓN automáticamente
+    inv.estado_rev = 'PEND. APROBACIÓN';
+  });
+
+  // Guardar en Sheets en batch
+  if (SCRIPT_URL && revisadas.length) {
+    apiCall('saveMany', { invoices: revisadas.map(toSheetsRow) }).catch(()=>{});
+  }
+  updateLocalCache();
+  console.log('[Config defecto] Aplicada a', revisadas.length, 'factura(s)');
 }
 
 // Sort via event delegation (único listener, sin duplicados)
