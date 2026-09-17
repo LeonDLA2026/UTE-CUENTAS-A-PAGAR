@@ -5643,7 +5643,7 @@ function renderDetalleProv(cuit) {
       <div class="prov-datos-grid">
         <div class="prov-dato" style="grid-column:1/-1">
           <label>Razón Social</label>
-          <input id="pd-nombre" value="${(prov.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre / Razón Social"/>
+          <input id="pd-nombre-${cuit}" value="${(prov.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre / Razón Social"/>
         </div>
         <div class="prov-dato">
           <label>CUIT</label>
@@ -5651,19 +5651,19 @@ function renderDetalleProv(cuit) {
         </div>
         <div class="prov-dato">
           <label>Condición IVA</label>
-          <select id="pd-condiva" style="width:100%;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;cursor:pointer">' + _buildCondIVAOptions(prov.condicion_iva||'') + '</select>
+          <select id="pd-condiva-${cuit}" style="width:100%;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;cursor:pointer">' + _buildCondIVAOptions(prov.condicion_iva||'') + '</select>
         </div>
         <div class="prov-dato">
           <label>📞 Teléfono / Celular</label>
-          <input id="pd-tel" type="tel" value="${(prov.telefono||'').replace(/"/g,'&quot;')}" placeholder="261 XXX-XXXX"/>
+          <input id="pd-tel-${cuit}" type="tel" value="${(prov.telefono||'').replace(/"/g,'&quot;')}" placeholder="261 XXX-XXXX"/>
         </div>
         <div class="prov-dato">
           <label>✉ Mail</label>
-          <input id="pd-mail" type="email" value="${(prov.mail||'').replace(/"/g,'&quot;')}" placeholder="proveedor@mail.com"/>
+          <input id="pd-mail-${cuit}" type="email" value="${(prov.mail||'').replace(/"/g,'&quot;')}" placeholder="proveedor@mail.com"/>
         </div>
         <div class="prov-dato" style="grid-column:1/-1">
           <label>🏦 CBU</label>
-          <input id="pd-cbu" value="${(prov.cbu||'').replace(/"/g,'&quot;')}" placeholder="22 dígitos"
+          <input id="pd-cbu-${cuit}" value="${(prov.cbu||'').replace(/"/g,'&quot;')}" placeholder="22 dígitos"
             style="font-family:monospace;letter-spacing:1px" maxlength="22"/>
           <div id="pd-cbu-info" style="min-height:16px;margin-top:2px">
             ${(()=>{
@@ -5679,7 +5679,7 @@ function renderDetalleProv(cuit) {
         </div>
         <div class="prov-dato" style="grid-column:1/-1">
           <label>📝 Notas</label>
-          <input id="pd-notas" value="${(prov.notas||'').replace(/"/g,'&quot;')}" placeholder="Notas internas…"/>
+          <input id="pd-notas-${cuit}" value="${(prov.notas||'').replace(/"/g,'&quot;')}" placeholder="Notas internas…"/>
         </div>
       </div>
     </div>
@@ -5857,7 +5857,7 @@ function _cuentaCorrienteProv(facts) {
 function guardarDatosProv(cuit) {
   const provs = loadProveedores();
   if (!provs[cuit]) provs[cuit] = { cuit };
-  const getV = id => (document.getElementById(id)||{value:''}).value.trim();
+  const getV = id => (document.getElementById(id+'-'+cuit)||{value:''}).value.trim();
   const cbuVal = getV('pd-cbu').replace(/\s/g,'');
 
   // Validar CBU si se ingresó
