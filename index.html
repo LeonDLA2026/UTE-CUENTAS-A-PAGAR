@@ -1771,9 +1771,13 @@ async function loadFromSheets(showToast = true) {
     setSplashStatus(`${DB.invoices.length} facturas cargadas`, 90);
     // Pre-sincronizar proveedores en background
     // Solo sincronizar proveedores que no existen aún (no en cada carga)
+    // Sincronizar proveedores solo de facturas ya revisadas (no pendientes)
     const _provs = loadProveedores();
-    const _nuevos = DB.invoices.filter(i => i.cuit && !_provs[String(i.cuit)]);
-    _nuevos.forEach(i => { try { syncProveedorDesdeFactura(i); } catch(e){} });
+    const _revisadas = DB.invoices.filter(i =>
+      i.cuit && !_provs[String(i.cuit)] &&
+      ['REVISADA','PEND. APROBACIÓN','EN CIRCUITO DE PAGO','PAGADA','CANJEADO'].includes(i.estado_rev)
+    );
+    _revisadas.forEach(i => { try { syncProveedorDesdeFactura(i); } catch(e){} });
     // Renderizar solo la tab activa para no bloquear la UI
     // No re-renderizar si el usuario está escribiendo en algún campo
     const _actEl = document.activeElement;
@@ -2346,7 +2350,9 @@ async function processAllOCR() {
       const warns=validateFields(campos);
       // Detectar concepto y período contable del texto OCR
       campos.concepto         = detectarConcepto(fullText);
-      campos.periodo_contable = detectarPeriodo(fullText, campos.fecha_emision);
+      // Período contable = mes de carga (no el de emisión)
+      const _hoyP = new Date();
+      campos.periodo_contable = _hoyP.getFullYear() + '-' + String(_hoyP.getMonth()+1).padStart(2,'0');
       // ── BLOQUEO FACTURA B ────────────────────────────────────────────
       if (campos.tipo && /\bB\b/.test(campos.tipo)
           && !campos.tipo.includes('Cup') && !campos.tipo.includes('Débito')) {
@@ -2473,7 +2479,7 @@ async function processAllOCR() {
 
       // Guardar inmediatamente en Sheets (con el link de Drive incluido)
       await saveInvoiceToSheets(inv);
-      try { syncProveedorDesdeFactura(inv); } catch(e) {}
+      // NO sincronizar proveedor al cargar — solo cuando pase a Revisada
       updateLocalCache();
       registrarAudit('carga', `Factura cargada: ${inv.numero_factura||'sin número'} — ${inv.proveedor||inv.cuit}`, {
         facturaId: inv.id, proveedor: inv.proveedor||'', importe: inv.total, campo: inv.tipo
@@ -3289,7 +3295,7 @@ function getFiltered() {
   const fCen= (document.getElementById('f-centro')||{value:''}).value;
   const { desde, hasta } = getFechaFiltro();
   return DB.invoices.filter(i=>{
-    if(['REVISADA','PAGADA','PAGO PARCIAL','CANJE PARCIAL','CANJEADO','PEND. APROBACIÓN'].includes(i.estado_rev))return false;
+    if(['REVISADA','PAGADA','PAGO PARCIAL','CANJE PARCIAL','CANJEADO','PEND. APROBACIÓN','EN CIRCUITO DE PAGO'].includes(i.estado_rev))return false;
     if(fR&&i.estado_rev!==fR)return false;
     if(fT&&i.tipo!==fT)return false;
     if(fCat&&i.categoria!==fCat)return false;
@@ -3737,6 +3743,30 @@ document.getElementById('btn-vw-save').addEventListener('click', async ()=>{
     }
   });
   Object.assign(inv,campos);
+
+  // Re-validar después de guardar y actualizar advertencias en el visor
+  const _warns = validateFields(inv);
+  inv.advertencias = _warns;
+  const wEl = document.getElementById('viewer-warns');
+  const wLi = document.getElementById('viewer-warns-list');
+  if (_warns.length) {
+    wEl.classList.remove('hidden');
+    wLi.innerHTML = _warns.map(w=>`<li>${w}</li>`).join('');
+  } else {
+    wEl.classList.add('hidden');
+    wLi.innerHTML = '';
+  }
+
+  // Sincronizar proveedor si el estado ya es REVISADA o superior
+  if (['REVISADA','PEND. APROBACIÓN','EN CIRCUITO DE PAGO'].includes(inv.estado_rev)) {
+    try { syncProveedorDesdeFactura(inv); } catch(e) {}
+  }
+
+  // Actualizar badge OCR en la tabla
+  inv.estado_ocr = _warns.length === 0 ? 'OK'
+    : _warns.some(w => w.includes('CUIT') || w.includes('total') || w.includes('fecha'))
+      ? 'ERROR' : 'WARN';
+
   renderTable();
   registrarAudit('edicion', `Factura #${_viewerId} editada — ${inv.proveedor||inv.cuit}`, {
     facturaId: _viewerId, proveedor: inv.proveedor||''
@@ -4360,14 +4390,15 @@ function guardarManual() {
     historial:[{campo:'creacion',label:'Creación',nuevo:'Cargada manualmente',fecha:new Date().toLocaleString('es-AR')}],
   };
   DB.invoices.unshift(inv);
-  saveInvoiceToSheets(inv); syncProveedorDesdeFactura(inv); updateLocalCache(); renderTable(); updateStats();
+  saveInvoiceToSheets(inv); updateLocalCache(); // sync proveedor al pasar a Revisada renderTable(); updateStats();
   limpiarManual();
   toast(`Factura #${inv.id} guardada ✅`,'success');
 }
 function limpiarManual() {
   const tasaEl = document.getElementById('m-tasa-iva'); if(tasaEl) tasaEl.value='';
   const concEl = document.getElementById('m-concepto'); if(concEl) concEl.value='';
-  const perEl  = document.getElementById('m-periodo');   if(perEl)  perEl.value='';
+  const _hoyFM = new Date(); const _defPerFM = String(_hoyFM.getMonth()+1).padStart(2,'0')+'/'+_hoyFM.getFullYear();
+  const perEl  = document.getElementById('m-periodo');   if(perEl)  perEl.value=_defPerFM;
   const catEl  = document.getElementById('m-categoria'); if(catEl)  catEl.value='';
   const cenEl  = document.getElementById('m-centro');    if(cenEl)  cenEl.value='';
   ['m-tipo','m-nro','m-cuit','m-prov','m-fecha','m-total',
